@@ -1,0 +1,32 @@
+{
+	"/": [
+		"src/routes/+page.ts",
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/adminconsole": [
+		"src/routes/+layout.ts"
+	],
+	"/auth/error": [
+		"src/routes/+layout.ts"
+	],
+	"/dashboard": [
+		"src/routes/dashboard/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/djamms-dashboard": [
+		"src/routes/+layout.ts"
+	],
+	"/jukebox-kiosk": [
+		"src/routes/+layout.ts"
+	],
+	"/playlistlibrary": [
+		"src/routes/+layout.ts"
+	],
+	"/queuemanager": [
+		"src/routes/+layout.ts"
+	],
+	"/videoplayer": [
+		"src/routes/+layout.ts"
+	]
+}

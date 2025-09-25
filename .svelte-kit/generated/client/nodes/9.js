@@ -1,0 +1,1 @@
+export { default as component } from "../../../../src/routes/queuemanager/+page.svelte";

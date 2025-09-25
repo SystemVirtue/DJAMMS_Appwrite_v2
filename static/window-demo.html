@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Window Management Demo - DJAMMS</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f, #1a1a2e, #16213e);
+            color: white;
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .hero {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #ec4899, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .demo-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .demo-btn {
+            padding: 15px 20px;
+            background: linear-gradient(45deg, #ec4899, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
+        }
+        .demo-btn.open {
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+        .demo-btn.open::after {
+            content: "OPEN";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+        .instructions {
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .instructions h3 {
+            color: #22d3ee;
+            margin-top: 0;
+        }
+        .status-panel {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .status-panel h3 {
+            color: #10b981;
+            margin-top: 0;
+        }
+        .window-list {
+            display: grid;
+            gap: 10px;
+        }
+        .window-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        .window-item .endpoint {
+            color: #22d3ee;
+            font-weight: 600;
+        }
+        .window-item .status {
+            color: #10b981;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>🪟 Window Management Demo</h1>
+        <p>Test the single-instance window management system</p>
+    </div>
+
+    <div class="demo-panel">
+        <div class="instructions">
+            <h3>🚀 How to Test</h3>
+            <ul>
+                <li><strong>Click any button below</strong> to open an endpoint</li>
+                <li><strong>Click the same button again</strong> - it will focus the existing window instead of opening a new one</li>
+                <li><strong>Close a window</strong> and the status will update automatically</li>
+                <li><strong>Try multiple endpoints</strong> - each can have only one instance</li>
+            </ul>
+        </div>
+
+        <div class="button-grid">
+            <button class="demo-btn" data-endpoint="/videoplayer" onclick="openEndpoint('/videoplayer')">
+                🎬 Video Player
+            </button>
+            <button class="demo-btn" data-endpoint="/queuemanager" onclick="openEndpoint('/queuemanager')">
+                📋 Queue Manager
+            </button>
+            <button class="demo-btn" data-endpoint="/playlistlibrary" onclick="openEndpoint('/playlistlibrary')">
+                📚 Playlist Library
+            </button>
+            <button class="demo-btn" data-endpoint="/adminconsole" onclick="openEndpoint('/adminconsole')">
+                ⚙️ Admin Console
+            </button>
+        </div>
+
+        <div class="status-panel">
+            <h3>📊 Open Windows Status</h3>
+            <div id="window-list" class="window-list">
+                <div class="window-item">
+                    <span>No windows currently open</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple window management demo
+        const openWindows = new Map();
+        let channel;
+
+        try {
+            channel = new BroadcastChannel('djamms-window-manager');
+            channel.addEventListener('message', handleMessage);
+        } catch (error) {
+            console.warn('BroadcastChannel not supported');
+        }
+
+        function handleMessage(event) {
+            const { type, payload } = event.data;
+            switch (type) {
+                case 'window-opened':
+                    openWindows.set(payload.endpoint, payload);
+                    updateUI();
+                    break;
+                case 'window-closed':
+                    openWindows.delete(payload.endpoint);
+                    updateUI();
+                    break;
+            }
+        }
+
+        function openEndpoint(endpoint) {
+            if (openWindows.has(endpoint)) {
+                // Focus existing window
+                console.log(`${endpoint} already open - focusing`);
+                if (channel) {
+                    channel.postMessage({
+                        type: 'window-focus-request',
+                        payload: { endpoint }
+                    });
+                }
+            } else {
+                // Open new window
+                console.log(`Opening new window for ${endpoint}`);
+                const features = getWindowFeatures(endpoint);
+                const newWindow = window.open(endpoint, '_blank', features);
+                
+                if (newWindow) {
+                    const windowInfo = {
+                        endpoint: endpoint,
+                        opened: Date.now()
+                    };
+                    openWindows.set(endpoint, windowInfo);
+                    updateUI();
+                    
+                    if (channel) {
+                        channel.postMessage({
+                            type: 'window-opened',
+                            payload: windowInfo
+                        });
+                    }
+                }
+            }
+        }
+
+        function getWindowFeatures(endpoint) {
+            const base = 'resizable=yes,scrollbars=yes,status=yes,toolbar=no,menubar=no';
+            switch (endpoint) {
+                case '/videoplayer':
+                    return `${base},width=1280,height=720,left=100,top=100`;
+                case '/queuemanager':
+                    return `${base},width=1000,height=800,left=200,top=150`;
+                case '/playlistlibrary':
+                    return `${base},width=1200,height=900,left=150,top=100`;
+                case '/adminconsole':
+                    return `${base},width=1100,height=850,left=250,top=200`;
+                default:
+                    return `${base},width=1024,height=768`;
+            }
+        }
+
+        function updateUI() {
+            // Update button states
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                const endpoint = btn.dataset.endpoint;
+                if (openWindows.has(endpoint)) {
+                    btn.classList.add('open');
+                } else {
+                    btn.classList.remove('open');
+                }
+            });
+
+            // Update window list
+            const listContainer = document.getElementById('window-list');
+            if (openWindows.size === 0) {
+                listContainer.innerHTML = '<div class="window-item"><span>No windows currently open</span></div>';
+            } else {
+                listContainer.innerHTML = Array.from(openWindows.entries())
+                    .map(([endpoint, info]) => `
+                        <div class="window-item">
+                            <span class="endpoint">${endpoint}</span>
+                            <span class="status">OPEN</span>
+                        </div>
+                    `).join('');
+            }
+        }
+
+        // Ping existing windows on load
+        if (channel) {
+            channel.postMessage({
+                type: 'ping-windows',
+                payload: {}
+            });
+        }
+
+        // Update UI every few seconds
+        setInterval(updateUI, 2000);
+    </script>
+</body>
+</html>

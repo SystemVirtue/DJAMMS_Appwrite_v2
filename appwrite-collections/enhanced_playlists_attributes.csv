@@ -1,0 +1,14 @@
+key,type,size,required,default,array
+name,string,255,true,,false
+description,string,1000,false,,false
+user_id,string,255,true,,false
+is_public,boolean,,false,false,false
+tags,string,50,false,,true
+category,string,100,false,general,false
+thumbnail_url,url,2048,false,,false
+tracks,string,65535,false,[]string,false
+play_count,integer,,false,0,false
+duration_total,integer,,false,0,false
+track_count,integer,,false,0,false
+is_featured,boolean,,false,false,false
+created_by_admin,boolean,,false,false,false

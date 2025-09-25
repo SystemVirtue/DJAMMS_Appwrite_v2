@@ -1,0 +1,25 @@
+{
+  "$id": "playlist-content-manager",
+  "name": "Playlist & Content Manager",
+  "runtime": "node-18.0",
+  "execute": ["any"],
+  "events": [
+    "databases.*.collections.playlists.documents.*.create",
+    "databases.*.collections.playlists.documents.*.update",
+    "databases.*.collections.playlists.documents.*.delete"
+  ],
+  "schedule": "",
+  "timeout": 30,
+  "enabled": true,
+  "logging": true,
+  "entrypoint": "src/main.js",
+  "commands": "npm install",
+  "ignore": [
+    "node_modules",
+    ".npm",
+    ".git",
+    "*.log",
+    "*.md"
+  ],
+  "variables": {}
+}

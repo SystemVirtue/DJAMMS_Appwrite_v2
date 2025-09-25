@@ -1,0 +1,8 @@
+key,type,size,required,default,array
+user_id,string,255,true,,false
+instance_id,string,255,true,,false
+queue_tracks,string,65535,false,[]string,false
+current_index,integer,,false,0,false
+shuffle_enabled,boolean,,false,false,false
+repeat_mode,enum,,false,none,false
+last_updated,datetime,,false,,false

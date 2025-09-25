@@ -1,0 +1,13 @@
+key,type,size,required,default,array
+user_id,string,255,true,,false
+track_id,string,255,true,,false
+video_id,string,255,true,,false
+title,string,500,true,,false
+artist,string,255,true,,false
+duration,integer,,false,0,false
+thumbnail_url,url,2048,false,,false
+played_at,datetime,,true,,false
+play_duration,integer,,false,0,false
+completed,boolean,,false,false,false
+instance_id,string,255,true,,false
+playlist_id,string,255,false,,false

@@ -1,0 +1,9 @@
+key,type,size,required,default,array
+videoId,string,255,true,,false
+title,string,500,true,,false
+channelTitle,string,300,true,,false
+thumbnail,string,500,false,,false
+duration,string,50,false,,false
+timestamp,datetime,true,,false
+requestedBy,string,255,false,,false
+priority,integer,,false,1000,false

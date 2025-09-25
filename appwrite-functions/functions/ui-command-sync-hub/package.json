@@ -1,0 +1,26 @@
+{
+  "name": "djamms-ui-command-sync-hub",
+  "version": "1.0.0",
+  "description": "UI Command & Sync Hub - UI commands with real-time broadcasting",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "appwrite functions createDeployment --functionId ui-command-sync-hub --code . --activate true"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": [
+    "appwrite",
+    "djamms",
+    "ui-commands",
+    "sync-hub",
+    "real-time",
+    "broadcasting",
+    "serverless"
+  ],
+  "author": "DJAMMS Team",
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+key,type,size,required,default,array
+user_id,string,255,true,,false
+instance_id,string,255,true,,false
+default_playlist_id,string,255,false,,false
+audio_quality,enum,,false,auto,false
+crossfade_duration,integer,,false,3000,false
+auto_play,boolean,,false,true,false
+volume_level,integer,,false,75,false
+theme_preference,string,255,false,dark,false
+notification_enabled,boolean,,false,true,false

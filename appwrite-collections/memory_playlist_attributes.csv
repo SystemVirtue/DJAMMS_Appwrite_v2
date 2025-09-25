@@ -1,0 +1,10 @@
+key,type,size,required,default,array
+videoId,string,255,true,,false
+title,string,500,true,,false
+channelTitle,string,300,true,,false
+thumbnail,string,500,false,,false
+duration,string,50,false,,false
+lastPlayedTimestamp,datetime,false,,false
+playCount,integer,,false,0,false
+isActive,boolean,,false,true,false
+shuffleOrder,integer,,false,0,false

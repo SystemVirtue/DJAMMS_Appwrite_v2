@@ -1,0 +1,21 @@
+{
+  "$id": "ui-command-sync-hub",
+  "name": "UI Command & Sync Hub",
+  "runtime": "node-18.0",
+  "execute": ["any"],
+  "events": [],
+  "schedule": "",
+  "timeout": 30,
+  "enabled": true,
+  "logging": true,
+  "entrypoint": "src/main.js",
+  "commands": "npm install",
+  "ignore": [
+    "node_modules",
+    ".npm",
+    ".git",
+    "*.log",
+    "*.md"
+  ],
+  "variables": {}
+}
