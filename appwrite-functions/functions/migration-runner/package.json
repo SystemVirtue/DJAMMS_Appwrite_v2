@@ -1,0 +1,9 @@
+{
+  "name": "migration-runner",
+  "version": "1.0.0",
+  "description": "Temporary function to migrate user preferences to JSON string",
+  "main": "src/main.js",
+  "dependencies": {
+    "node-appwrite": "^8.0.0"
+  }
+}

@@ -27,13 +27,19 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/adminconsole" | "/auth" | "/auth/error" | "/dashboard" | "/dashboard/tabs" | "/djamms-dashboard" | "/jukebox-kiosk" | "/playlistlibrary" | "/queuemanager" | "/videoplayer";
+		RouteId(): "/" | "/adminconsole" | "/api" | "/api/admin" | "/api/admin/user-sync" | "/api/playlists" | "/api/ui-command" | "/api/venues" | "/auth" | "/auth/error" | "/dashboard" | "/dashboard/tabs" | "/djamms-dashboard" | "/jukebox-kiosk" | "/playlistlibrary" | "/queuemanager" | "/videoplayer";
 		RouteParams(): {
 			
 		};
 		LayoutParams(): {
 			"/": Record<string, never>;
 			"/adminconsole": Record<string, never>;
+			"/api": Record<string, never>;
+			"/api/admin": Record<string, never>;
+			"/api/admin/user-sync": Record<string, never>;
+			"/api/playlists": Record<string, never>;
+			"/api/ui-command": Record<string, never>;
+			"/api/venues": Record<string, never>;
 			"/auth": Record<string, never>;
 			"/auth/error": Record<string, never>;
 			"/dashboard": Record<string, never>;
@@ -44,7 +50,7 @@ declare module "$app/types" {
 			"/queuemanager": Record<string, never>;
 			"/videoplayer": Record<string, never>
 		};
-		Pathname(): "/" | "/adminconsole" | "/adminconsole/" | "/auth" | "/auth/" | "/auth/error" | "/auth/error/" | "/dashboard" | "/dashboard/" | "/dashboard/tabs" | "/dashboard/tabs/" | "/djamms-dashboard" | "/djamms-dashboard/" | "/jukebox-kiosk" | "/jukebox-kiosk/" | "/playlistlibrary" | "/playlistlibrary/" | "/queuemanager" | "/queuemanager/" | "/videoplayer" | "/videoplayer/";
+		Pathname(): "/" | "/adminconsole" | "/adminconsole/" | "/api" | "/api/" | "/api/admin" | "/api/admin/" | "/api/admin/user-sync" | "/api/admin/user-sync/" | "/api/playlists" | "/api/playlists/" | "/api/ui-command" | "/api/ui-command/" | "/api/venues" | "/api/venues/" | "/auth" | "/auth/" | "/auth/error" | "/auth/error/" | "/dashboard" | "/dashboard/" | "/dashboard/tabs" | "/dashboard/tabs/" | "/djamms-dashboard" | "/djamms-dashboard/" | "/jukebox-kiosk" | "/jukebox-kiosk/" | "/playlistlibrary" | "/playlistlibrary/" | "/queuemanager" | "/queuemanager/" | "/videoplayer" | "/videoplayer/";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/demo-sync.js" | "/demo.html" | "/favicon.png" | "/icon.png" | "/window-demo.html" | string & {};
 	}

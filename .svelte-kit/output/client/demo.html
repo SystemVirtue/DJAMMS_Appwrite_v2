@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJAMMS Player Sync Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f, #1a1a2e, #16213e);
+            color: white;
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #ec4899, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            color: #9ca3af;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .instructions {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto 40px;
+        }
+        .instructions h2 {
+            color: #22d3ee;
+            margin-top: 0;
+        }
+        .instructions ol {
+            color: #d1d5db;
+            line-height: 1.8;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .feature {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .feature h3 {
+            color: #ec4899;
+            margin-bottom: 10px;
+        }
+        .feature p {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>🎵 DJAMMS</h1>
+        <p>Digital Jukebox and Media Management System<br>
+        Real-time Multi-Window Player Synchronization Demo</p>
+    </div>
+
+    <div class="instructions">
+        <h2>🚀 How to Test Real-time Synchronization</h2>
+        <ol>
+            <li><strong>Open Multiple Windows:</strong> Press <kbd>Ctrl+N</kbd> (or <kbd>Cmd+N</kbd> on Mac) to open this page in multiple browser windows</li>
+            <li><strong>Use the Controls:</strong> Click the buttons in the floating control panel in any window</li>
+            <li><strong>Watch the Magic:</strong> See how the status updates instantly across ALL open windows!</li>
+            <li><strong>Try Different States:</strong> Test Play, Pause, Remote connection, and Disconnect</li>
+            <li><strong>Check the Console:</strong> Open Developer Tools (F12) to see the real-time messages being broadcast</li>
+        </ol>
+    </div>
+
+    <div class="features">
+        <div class="feature">
+            <h3>🔄 Real-time Sync</h3>
+            <p>Player status updates instantly across all windows using BroadcastChannel API</p>
+        </div>
+        <div class="feature">
+            <h3>🪟 Multi-Window</h3>
+            <p>Dashboard, Queue Manager, Video Player, and Admin Console all stay synchronized</p>
+        </div>
+        <div class="feature">
+            <h3>⚡ Instant Updates</h3>
+            <p>No polling or delays - changes propagate immediately to all connected windows</p>
+        </div>
+        <div class="feature">
+            <h3>🎯 YouTube Integration</h3>
+            <p>When integrated with YouTube Player API, all playback states sync automatically</p>
+        </div>
+    </div>
+
+    <script src="/demo-sync.js"></script>
+</body>
+</html>

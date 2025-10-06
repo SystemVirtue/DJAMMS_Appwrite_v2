@@ -144,19 +144,21 @@ export class DJAMMSService {
    */
   private determineUserRole(email: string): 'admin' | 'user' | 'developer' {
     const adminEmails = [
-      'admin@djamms.com',
-      'mike@djamms.com',
+      'admin@djamms.app',
+      'admin@systemvirtue.com',
       // Add your admin emails here
     ];
     
     const devEmails = [
-      'dev@djamms.com',
-      'developer@djamms.com',
+      'dev@djamms.app',
+      'developer@djamms.app',
+      'dev@systemvirtue.com',
+      'djammsdemo@gmail.com',
       // Add developer emails here
     ];
     
     const adminDomains = [
-      '@djamms.com',
+      '@djamms.app',
       // Add admin domain patterns here
     ];
     
@@ -495,8 +497,8 @@ export class DJAMMSService {
         this.databaseId,
         COLLECTIONS_V3.PLAYLISTS,
         [
-          Query.equal('isDefault', true),
-          Query.equal('visibility', 'system'),
+          Query.equal('is_default', true),
+          Query.equal('category', 'system'),
           Query.limit(1)
         ]
       );

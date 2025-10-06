@@ -7,6 +7,7 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { databases, DATABASE_ID } from '$lib/utils/appwrite';
 import { ID } from 'appwrite';
+import { successResponse, errorResponse } from '$lib/utils/apiResponse';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -51,11 +52,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					newPlaylist
 				);
 
-				return json({
-					success: true,
-					playlist: createdPlaylist,
-					message: 'Playlist created successfully'
-				});
+				return json(successResponse({ playlist: createdPlaylist }, 'Playlist created successfully'));
 
 			case 'update':
 				if (!playlistData?.playlistId) {
@@ -81,10 +78,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					updateData
 				);
 
-				return json({
-					success: true,
-					message: 'Playlist updated successfully'
-				});
+				return json(successResponse(null, 'Playlist updated successfully'));
 
 			case 'delete':
 				if (!playlistData?.playlistId) {
@@ -97,10 +91,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					playlistData.playlistId
 				);
 
-				return json({
-					success: true,
-					message: 'Playlist deleted successfully'
-				});
+				return json(successResponse(null, 'Playlist deleted successfully'));
 
 			default:
 				throw error(400, `Unknown action: ${action}`);
@@ -108,7 +99,8 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	} catch (err: any) {
 		console.error('Playlist API error:', err);
-		throw error(500, err.message || 'Internal server error');
+		const resp = errorResponse({ code: err?.code || 'PLAYLIST_API_ERROR', message: err?.message || 'Internal server error', details: err });
+		return new Response(JSON.stringify(resp), { status: 500, headers: { 'Content-Type': 'application/json' } });
 	}
 };
 
@@ -140,6 +132,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	} catch (err: any) {
 		console.error('Playlist GET error:', err);
-		throw error(500, err.message || 'Internal server error');
+		const resp = errorResponse({ code: err?.code || 'PLAYLIST_GET_ERROR', message: err?.message || 'Internal server error', details: err });
+		return new Response(JSON.stringify(resp), { status: 500, headers: { 'Content-Type': 'application/json' } });
 	}
 };

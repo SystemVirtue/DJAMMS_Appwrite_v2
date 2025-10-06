@@ -161,17 +161,31 @@
 	}
 
 	onMount(async () => {
+		// Wait for authentication to initialize
+		if ($djammsStore.isLoading) {
+			// Wait for auth to complete
+			await new Promise(resolve => {
+				const unsubscribe = djammsStore.subscribe(state => {
+					if (!state.isLoading) {
+						unsubscribe();
+						resolve(void 0);
+					}
+				});
+			});
+		}
+
 		// Check authentication
 		if (!$djammsStore.isAuthenticated) {
-			console.log('🔐 Queue Manager: User not authenticated, redirecting to dashboard');
-			window.location.href = '/dashboard';
+			console.log('🔐 Queue Manager: User not authenticated, closing window');
+			alert('Authentication required. Please log in first.');
+			window.close();
 			return;
 		}
 
 		// Check for duplicate instance
 		if (browser && windowManager.shouldPreventDuplicate()) {
-			alert('Queue Manager is already open in another window. Redirecting to dashboard.');
-			window.location.href = '/dashboard';
+			alert('Queue Manager is already open in another window.');
+			window.close();
 			return;
 		}
 

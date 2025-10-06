@@ -32,13 +32,72 @@
 		Unlock,
 		RefreshCw,
 		Trash2,
-		Plus
+		Plus,
+		ListMusic,
+		GripVertical,
+		Music
 	} from 'lucide-svelte';
 
 	import { browser } from '$app/environment';
 
 	// Active tab
 	let activeTab = 'player';
+
+	// Queue management
+	let draggedItem: any = null;
+	let draggedOverItem: any = null;
+
+	// User sync state
+	let syncLoading = false;
+	let syncResult: { success: boolean; message: string; summary?: any } | null = null;
+
+	// Initialize venue subscription for real-time updates
+	onMount(() => {
+		// Check for hash parameter to set initial tab
+		if (browser && window.location.hash) {
+			const hash = window.location.hash.substring(1); // Remove the '#'
+			const validTabs = ['player', 'queue', 'overlay', 'appearance', 'keyboard', 'system', 'users', 'advanced'];
+			if (validTabs.includes(hash)) {
+				activeTab = hash;
+			}
+		}
+
+		// Load user venues and set current venue for admin console
+		if ($djammsStore.isAuthenticated && $djammsStore.currentUser?.user_id) {
+			// Load user's venues
+			djammsStore.loadUserVenues($djammsStore.currentUser.user_id).then(() => {
+				// If no current venue is set but user has venues, set the first one as current
+				if (!$djammsStore.currentVenue && $djammsStore.userVenues.length > 0) {
+					console.log('🎵 AdminConsole: Setting first available venue as current venue');
+					djammsStore.setCurrentVenue($djammsStore.userVenues[0].venue_id);
+				} else if ($djammsStore.currentVenue?.venue_id) {
+					// Subscribe to existing current venue
+					console.log('🎵 AdminConsole: Subscribing to existing current venue');
+					djammsStore.subscribeToVenue($djammsStore.currentVenue.venue_id);
+				}
+			}).catch(error => {
+				console.error('🎵 AdminConsole: Failed to initialize venue:', error);
+			});
+		}
+
+		// Subscribe to store changes to handle venue loading/changes
+		const unsubscribe = djammsStore.subscribe(state => {
+			if (state.currentVenue?.venue_id && !state.venueSubscription) {
+				// Venue is available and not already subscribed, subscribe now
+				console.log('🎵 AdminConsole: Subscribing to venue updates for real-time queue sync');
+				djammsStore.subscribeToVenue(state.currentVenue.venue_id);
+			}
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	});
+
+	onDestroy(() => {
+		// Clean up venue subscription
+		djammsStore.unsubscribeFromVenue();
+	});
 
 	// Player Preferences
 	let playerSettings = {
@@ -116,18 +175,16 @@
 	let unsavedChanges = false;
 	let saveStatus = ''; // 'saving', 'saved', 'error'
 
-	function getStatusDisplay(status: any) {
-		switch (status?.status) {
-			case 'connected-local-playing':
+	function getStatusDisplay(status: string) {
+		switch (status) {
+			case 'playing':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PLAYING', class: 'status-connected-playing' };
-			case 'connected-local-paused':
+			case 'paused':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PAUSED', class: 'status-connected-paused' };
-			case 'connected-remote-playing':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PLAYING', class: 'status-connected-playing' };
-			case 'connected-remote-paused':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PAUSED', class: 'status-connected-paused' };
-			case 'server-error':
-				return { icon: AlertTriangle, text: 'SERVER ERROR', class: 'status-error' };
+			case 'idle':
+				return { icon: WifiOff, text: 'IDLE', class: 'status-disconnected' };
+			case 'stopped':
+				return { icon: WifiOff, text: 'STOPPED', class: 'status-disconnected' };
 			default:
 				return { icon: WifiOff, text: 'NO CONNECTED PLAYER', class: 'status-disconnected' };
 		}
@@ -210,12 +267,107 @@
 		}
 	}
 
+	async function syncUsers() {
+		if (!$djammsStore.currentUser) {
+			alert('You must be logged in to perform user synchronization.');
+			return;
+		}
+
+		syncLoading = true;
+		syncResult = null;
+
+		try {
+			const response = await fetch('/api/admin/user-sync', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					userId: $djammsStore.currentUser.user_id,
+					userEmail: $djammsStore.currentUser.email
+				})
+			});
+
+			const result = await response.json();
+
+			if (response.ok) {
+				syncResult = {
+					success: true,
+					message: result.message,
+					summary: result.summary
+				};
+			} else {
+				syncResult = {
+					success: false,
+					message: result.message || 'Failed to synchronize users'
+				};
+			}
+		} catch (error) {
+			console.error('User sync error:', error);
+			syncResult = {
+				success: false,
+				message: 'Network error occurred during synchronization'
+			};
+		} finally {
+			syncLoading = false;
+		}
+	}
+
+	// Queue management functions
+	function onDragStart(event: DragEvent, item: any) {
+		draggedItem = item;
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+		}
+	}
+
+	function onDragOver(event: DragEvent, item: any) {
+		event.preventDefault();
+		draggedOverItem = item;
+		if (event.dataTransfer) {
+			event.dataTransfer.dropEffect = 'move';
+		}
+	}
+
+	function onDragEnd() {
+		draggedItem = null;
+		draggedOverItem = null;
+	}
+
+	async function onDrop(event: DragEvent, targetItem: any) {
+		event.preventDefault();
+		
+		if (!draggedItem || draggedItem === targetItem) {
+			return;
+		}
+
+		const currentQueue = $djammsStore.activeQueue || [];
+		const draggedIndex = currentQueue.findIndex(item => item === draggedItem);
+		const targetIndex = currentQueue.findIndex(item => item === targetItem);
+
+		if (draggedIndex === -1 || targetIndex === -1) {
+			return;
+		}
+
+		// Reorder the queue
+		const newQueue = [...currentQueue];
+		const [removed] = newQueue.splice(draggedIndex, 1);
+		newQueue.splice(targetIndex, 0, removed);
+
+		// Send command to update queue order
+		await djammsStore.sendCommand('reorder_queue', {
+			newQueue: newQueue
+		});
+
+		onDragEnd();
+	}
+
 	onMount(async () => {
 		// Check for duplicate instance first
 		if (browser && windowManager.shouldPreventDuplicate()) {
-			// Show alert and redirect
-			alert('Admin Console is already open in another window. Redirecting to dashboard.');
-			window.location.href = '/dashboard';
+			// Show alert and close window
+			alert('Admin Console is already open in another window.');
+			window.close();
 			return;
 		}
 
@@ -267,8 +419,8 @@
 			{/if}
 
 			<!-- Player Status -->
-			{#if $playerStatus}
-				{@const statusDisplay = getStatusDisplay($playerStatus)}
+			{#if $djammsStore.playerState?.status}
+				{@const statusDisplay = getStatusDisplay($djammsStore.playerState.status)}
 				<div class="status-indicator {statusDisplay.class}">
 					<svelte:component this={statusDisplay.icon} class="w-4 h-4" />
 					<span class="hidden sm:inline">{statusDisplay.text}</span>
@@ -297,6 +449,14 @@
 			>
 				<Volume2 class="w-4 h-4" />
 				Player
+			</button>
+			<button 
+				class="tab-button"
+				class:active={activeTab === 'queue'}
+				on:click={() => activeTab = 'queue'}
+			>
+				<ListMusic class="w-4 h-4" />
+				Current Queue
 			</button>
 			<button 
 				class="tab-button"
@@ -329,6 +489,14 @@
 			>
 				<Database class="w-4 h-4" />
 				System
+			</button>
+			<button 
+				class="tab-button"
+				class:active={activeTab === 'users'}
+				on:click={() => activeTab = 'users'}
+			>
+				<User class="w-4 h-4" />
+				User Management
 			</button>
 			<button 
 				class="tab-button"
@@ -970,6 +1138,166 @@
 				</div>
 			</div>
 		{/if}
+
+		{#if activeTab === 'queue'}
+			<!-- Current Queue Management -->
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-2xl font-bold text-white mb-6">Current Queue</h2>
+
+				<div class="space-y-6">
+					<!-- Now Playing Section -->
+					<div class="settings-section">
+						<h3 class="settings-section-title flex items-center gap-2">
+							<Music class="w-5 h-5" />
+							Now Playing
+						</h3>
+
+						{#if $djammsStore.nowPlaying}
+							<div class="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+								<div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+									<Music class="w-8 h-8 text-white" />
+								</div>
+								<div class="flex-1 min-w-0">
+									<h4 class="text-white font-semibold text-lg truncate">{$djammsStore.nowPlaying.title}</h4>
+									<p class="text-gray-400 truncate">{$djammsStore.nowPlaying.artist || $djammsStore.nowPlaying.channelTitle || 'Unknown Artist'}</p>
+									<div class="flex items-center gap-2 mt-1">
+										<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+										<span class="text-green-400 text-sm">Currently Playing</span>
+									</div>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-center justify-center p-8 bg-white/5 rounded-lg border border-white/10 border-dashed">
+								<div class="text-center">
+									<Music class="w-12 h-12 text-gray-500 mx-auto mb-2" />
+									<p class="text-gray-400">No track currently playing</p>
+								</div>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Queue Section -->
+					<div class="settings-section">
+						<h3 class="settings-section-title flex items-center gap-2">
+							<ListMusic class="w-5 h-5" />
+							Queue ({($djammsStore.activeQueue || []).length} tracks)
+						</h3>
+
+						{#if ($djammsStore.activeQueue || []).length > 0}
+							<div class="space-y-2">
+								{#each ($djammsStore.activeQueue || []) as track, index (track.video_id)}
+									<div
+										class="queue-item group"
+										class:dragged={draggedItem === track}
+										class:drag-over={draggedOverItem === track}
+										draggable="true"
+										on:dragstart={(e) => onDragStart(e, track)}
+										on:dragover={(e) => onDragOver(e, track)}
+										on:drop={(e) => onDrop(e, track)}
+										on:dragend={onDragEnd}
+										role="button"
+										tabindex="0"
+									>
+										<div class="flex items-center gap-3">
+											<!-- Drag Handle -->
+											<div class="drag-handle opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+												<GripVertical class="w-4 h-4 text-gray-400" />
+											</div>
+
+											<!-- Track Number -->
+											<div class="w-8 text-center">
+												<span class="text-gray-400 text-sm font-mono">{index + 1}</span>
+											</div>
+
+											<!-- Track Info -->
+											<div class="flex-1 min-w-0">
+												<h4 class="text-white font-medium truncate">{track.title}</h4>
+												<p class="text-gray-400 text-sm truncate">{track.artist || track.channelTitle || 'Unknown Artist'}</p>
+											</div>
+
+											<!-- Duration -->
+											{#if track.duration}
+												<div class="text-gray-400 text-sm font-mono">
+													{track.duration}
+												</div>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="flex items-center justify-center p-8 bg-white/5 rounded-lg border border-white/10 border-dashed">
+								<div class="text-center">
+									<ListMusic class="w-12 h-12 text-gray-500 mx-auto mb-2" />
+									<p class="text-gray-400">Queue is empty</p>
+									<p class="text-gray-500 text-sm">Add tracks to start playing music</p>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		{#if activeTab === 'users'}
+			<!-- User Management -->
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-2xl font-bold text-white mb-6">User Management</h2>
+
+				<div class="grid grid-cols-1 gap-8">
+					<!-- User Sync Section -->
+					<div class="settings-section">
+						<h3 class="settings-section-title">User Synchronization</h3>
+						<p class="text-gray-400 text-sm mb-4">
+							Synchronize all Appwrite authentication users with the database. This ensures every auth user has a corresponding user document and venue created.
+						</p>
+
+						<div class="flex items-center gap-4">
+							<button
+								on:click={syncUsers}
+								disabled={syncLoading}
+								class="px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 text-white rounded-lg transition-all flex items-center gap-2 font-medium"
+							>
+								{#if syncLoading}
+									<RefreshCw class="w-5 h-5 animate-spin" />
+									Synchronizing...
+								{:else}
+									<RefreshCw class="w-5 h-5" />
+									Sync Users
+								{/if}
+							</button>
+
+							{#if syncResult}
+								<div class="flex-1">
+									<div class="p-4 rounded-lg {syncResult.success ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'}">
+										<div class="flex items-center gap-2 mb-2">
+											{#if syncResult.success}
+												<Check class="w-5 h-5 text-green-500" />
+												<span class="text-green-500 font-medium">Synchronization Complete</span>
+											{:else}
+												<AlertTriangle class="w-5 h-5 text-red-500" />
+												<span class="text-red-500 font-medium">Synchronization Failed</span>
+											{/if}
+										</div>
+										<p class="text-sm text-gray-300">{syncResult.message}</p>
+										{#if syncResult.summary}
+											<div class="mt-2 text-xs text-gray-400">
+												<span>Processed: {syncResult.summary.processed}</span>
+												<span class="ml-4">Created: {syncResult.summary.created}</span>
+												<span class="ml-4">Updated: {syncResult.summary.updated}</span>
+												{#if syncResult.summary.errors > 0}
+													<span class="ml-4 text-red-400">Errors: {syncResult.summary.errors}</span>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Action Bar -->
@@ -1124,5 +1452,29 @@
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.5rem;
 		cursor: pointer;
+	}
+
+	.settings-section {
+		@apply bg-white/5 rounded-xl border border-white/10 p-6 backdrop-blur-sm;
+	}
+
+	.settings-section-title {
+		@apply text-xl font-semibold text-white mb-4;
+	}
+
+	.queue-item {
+		@apply flex items-center p-3 bg-white/5 rounded-lg border border-white/10 transition-all duration-200 hover:bg-white/10 hover:border-white/20;
+	}
+
+	.queue-item.dragged {
+		@apply opacity-50 scale-95;
+	}
+
+	.queue-item.drag-over {
+		@apply border-blue-500 bg-blue-500/10;
+	}
+
+	.drag-handle {
+		@apply flex-shrink-0;
 	}
 </style>

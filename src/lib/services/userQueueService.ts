@@ -1,10 +1,14 @@
-import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite'; // Ensure this file exists at src/lib/utils/appwrite.ts
+// If the file does not exist, create src/lib/utils/appwrite.ts and export the required members:
+// export const databases = ...;
+// export const DATABASE_ID = ...;
+// export const COLLECTIONS = { USER_QUEUES: 'user_queues', ... };
 import type { 
 	UserQueue, 
 	UserQueueCreate, 
 	UserQueueUpdate, 
 	ParsedUserQueue,
-	PlaylistTrack,
+	Track as PlaylistTrack,
 	RepeatMode
 } from '$lib/types';
 import { Query } from 'appwrite';
@@ -125,6 +129,10 @@ export class UserQueueService {
 					instance_id: instanceId,
 					queue_tracks: JSON.stringify([track]),
 					current_index: 0,
+					repeat_mode: 'off',
+					shuffle_enabled: false,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
 					last_updated: new Date().toISOString()
 				};
 				return this.createUserQueue(newQueueData);

@@ -5,7 +5,7 @@
 	import { currentTrack, playerControls, queueInfo } from '$lib/stores/djamms';
 	import { browser } from '$app/environment';
 	import { InstanceIds } from '$lib/utils/idGenerator';
-	import type { PlaylistTrack } from '$lib/types';
+	import type { Track } from '$lib/types';
 	import { 
 		ListMusic,
 		Play,
@@ -32,7 +32,7 @@
 	let instanceId = InstanceIds.queueManagerTab();
 
 	// Queue data from Appwrite
-	let queue: PlaylistTrack[] = [];
+	let queue: Track[] = [];
 	let isLoading = true;
 	let error: string | null = null;
 	let globalDefaultPlaylist: any = null;
@@ -48,10 +48,10 @@
 	let dropIndicatorIndex: number | null = null;
 
 	// Reactive current playlist name
-	$: currentPlaylistName = $djammsStore.currentVenue?.active_playlist?.name || 'No Active Playlist';
+	$: currentPlaylistName = $djammsStore.currentPlaylist?.name || 'No Active Playlist';
 	
 	// Reactive filtered queue
-	$: filteredQueue = queue.filter(track => 
+	$: filteredQueue = $djammsStore.activeQueue.filter(track => 
 		track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
 		track.channelTitle?.toLowerCase().includes(searchQuery.toLowerCase())
 	);
@@ -60,13 +60,9 @@
 		isLoading = true;
 		error = null;
 		try {
-			const activePlaylist = $djammsStore.currentVenue?.active_playlist;
-			if (activePlaylist) {
-				queue = activePlaylist.tracks || [];
-				console.log(`🎵 Queue Manager Tab: Loaded ${queue.length} tracks for playlist: ${activePlaylist.name}`);
-			} else {
-				queue = [];
-			}
+			// Queue is now reactive from djammsStore.activeQueue
+			queue = $djammsStore.activeQueue || [];
+			console.log(`🎵 Queue Manager Tab: Loaded ${queue.length} tracks from active queue`);
 		} catch (err) {
 			console.error('🎵 Queue Manager Tab: Error loading queue:', err);
 			error = err instanceof Error ? err.message : 'Failed to load queue';
@@ -76,18 +72,16 @@
 		}
 	}
 
-	function getStatusDisplay(status: any) {
+	function getStatusDisplay(status: string) {
 		switch (status) {
-			case 'connected-local-playing':
+			case 'playing':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PLAYING', class: 'status-connected-playing' };
-			case 'connected-local-paused':
+			case 'paused':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PAUSED', class: 'status-connected-paused' };
-			case 'connected-remote-playing':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PLAYING', class: 'status-connected-playing' };
-			case 'connected-remote-paused':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PAUSED', class: 'status-connected-paused' };
-			case 'server-error':
-				return { icon: AlertTriangle, text: 'SERVER ERROR', class: 'status-error' };
+			case 'idle':
+				return { icon: WifiOff, text: 'IDLE', class: 'status-disconnected' };
+			case 'stopped':
+				return { icon: WifiOff, text: 'STOPPED', class: 'status-disconnected' };
 			default:
 				return { icon: WifiOff, text: 'NO CONNECTED PLAYER', class: 'status-disconnected' };
 		}
@@ -165,10 +159,10 @@
 		// Load initial queue
 		loadQueue();
 		
-		// Set up reactive subscription to venue changes
+		// Set up reactive subscription to djammsStore changes
 		const unsubscribe = djammsStore.subscribe((state) => {
-			if (state.currentVenue?.active_playlist) {
-				console.log('🎵 Queue Manager Tab: Active playlist changed to:', state.currentVenue.active_playlist.name);
+			if (state.activeQueue) {
+				console.log('🎵 Queue Manager Tab: Active queue changed, reloading...');
 				loadQueue();
 			}
 		});
@@ -196,8 +190,8 @@
 			</div>
 
 			<!-- Player Status -->
-			{#if $djammsStore.currentVenue?.player_status}
-				{@const statusDisplay = getStatusDisplay($djammsStore.currentVenue.player_status)}
+			{#if $djammsStore.playerState?.status}
+				{@const statusDisplay = getStatusDisplay($djammsStore.playerState.status)}
 				<div class="status-indicator {statusDisplay.class}">
 					<svelte:component this={statusDisplay.icon} class="w-4 h-4" />
 					<span class="text-sm">{statusDisplay.text}</span>
@@ -240,7 +234,7 @@
 
 				<!-- Play/Pause -->
 				<button class="p-3 bg-youtube-red hover:bg-red-600 rounded-xl text-white transition-colors">
-					{#if $djammsStore.currentVenue?.now_playing?.is_playing}
+					{#if $djammsStore.playerState?.status === 'playing'}
 						<Pause class="w-6 h-6" />
 					{:else}
 						<Play class="w-6 h-6" />
@@ -340,7 +334,7 @@
 		{:else}
 			<div class="p-6">
 				<div class="space-y-2">
-					{#each filteredQueue as track, index (track.id)}
+					{#each filteredQueue as track, index (track.video_id)}
 						<div
 							class="group relative p-4 glass-morphism rounded-xl border border-white/10 hover:border-music-purple/50 transition-all duration-300 cursor-pointer"
 							class:opacity-50={draggedIndex === index}
@@ -435,30 +429,54 @@
 
 <style>
 	.status-indicator {
-		@apply flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 0.5rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
 	}
 	
 	.status-connected-playing {
-		@apply bg-green-500/20 text-green-400 border border-green-500/30;
+		background-color: rgba(34, 197, 94, 0.2);
+		color: rgb(74, 222, 128);
+		border: 1px solid rgba(34, 197, 94, 0.3);
 	}
 	
 	.status-connected-paused {
-		@apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+		background-color: rgba(245, 158, 11, 0.2);
+		color: rgb(250, 204, 21);
+		border: 1px solid rgba(245, 158, 11, 0.3);
 	}
 	
 	.status-disconnected {
-		@apply bg-red-500/20 text-red-400 border border-red-500/30;
+		background-color: rgba(239, 68, 68, 0.2);
+		color: rgb(248, 113, 113);
+		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
 	
 	.status-error {
-		@apply bg-red-500/20 text-red-400 border border-red-500/30;
+		background-color: rgba(239, 68, 68, 0.2);
+		color: rgb(248, 113, 113);
+		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
 
 	.slider::-webkit-slider-thumb {
-		@apply appearance-none w-4 h-4 bg-music-purple rounded-full cursor-pointer;
+		appearance: none;
+		width: 1rem;
+		height: 1rem;
+		background-color: rgb(147, 51, 234);
+		border-radius: 9999px;
+		cursor: pointer;
 	}
 	
 	.slider::-moz-range-thumb {
-		@apply w-4 h-4 bg-music-purple rounded-full cursor-pointer border-0;
+		width: 1rem;
+		height: 1rem;
+		background-color: rgb(147, 51, 234);
+		border-radius: 9999px;
+		cursor: pointer;
+		border: 0;
 	}
 </style>

@@ -1,0 +1,301 @@
+import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import type { 
+	UserQueue, 
+	UserQueueCreate, 
+	UserQueueUpdate, 
+	ParsedUserQueue,
+	Track as PlaylistTrack,
+	RepeatMode
+} from '$lib/types.ts';
+import { Query } from 'appwrite';
+
+/**
+ * Service for managing user queues in Appwrite
+ */
+export class UserQueueService {
+	private static instance: UserQueueService;
+
+	static getInstance(): UserQueueService {
+		if (!UserQueueService.instance) {
+			UserQueueService.instance = new UserQueueService();
+		}
+		return UserQueueService.instance;
+	}
+
+	private readonly collectionId = COLLECTIONS.USER_QUEUES;
+
+	/**
+	 * Parse tracks from JSON string
+	 */
+	private parseTracksFromString(tracksString: string): PlaylistTrack[] {
+		try {
+			const parsed = JSON.parse(tracksString);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (error) {
+			console.error('Failed to parse tracks from string:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * Convert UserQueue to ParsedUserQueue
+	 */
+	private parseUserQueue(queue: UserQueue): ParsedUserQueue {
+		return {
+			...queue,
+			queue_tracks: this.parseTracksFromString(queue.queue_tracks)
+		};
+	}
+
+	/**
+	 * Get user queue for specific instance
+	 */
+	async getUserQueue(userId: string, instanceId: string): Promise<ParsedUserQueue | null> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.equal('instance_id', instanceId),
+					Query.limit(1)
+				]
+			);
+
+			if (response.documents.length > 0) {
+				return this.parseUserQueue(response.documents[0] as unknown as UserQueue);
+			}
+
+			return null;
+		} catch (error) {
+			console.error('Failed to get user queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Create a new user queue
+	 */
+	async createUserQueue(queueData: UserQueueCreate): Promise<ParsedUserQueue> {
+		try {
+			const response = await databases.createDocument(
+				DATABASE_ID,
+				this.collectionId,
+				'unique()',
+				queueData
+			);
+
+			return this.parseUserQueue(response as unknown as UserQueue);
+		} catch (error) {
+			console.error('Failed to create user queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Update user queue
+	 */
+	async updateUserQueue(queueId: string, updates: UserQueueUpdate): Promise<ParsedUserQueue> {
+		try {
+			const response = await databases.updateDocument(
+				DATABASE_ID,
+				this.collectionId,
+				queueId,
+				updates
+			);
+
+			return this.parseUserQueue(response as unknown as UserQueue);
+		} catch (error) {
+			console.error('Failed to update user queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Add track to queue
+	 */
+	async addTrackToQueue(userId: string, instanceId: string, track: PlaylistTrack, position?: number): Promise<ParsedUserQueue> {
+		try {
+			const currentQueue = await this.getUserQueue(userId, instanceId);
+			
+			if (!currentQueue) {
+				// Create new queue if it doesn't exist
+				const newQueueData: UserQueueCreate = {
+					user_id: userId,
+					instance_id: instanceId,
+					queue_tracks: JSON.stringify([track]),
+					current_index: 0,
+					repeat_mode: 'off',
+					shuffle_enabled: false,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+					last_updated: new Date().toISOString()
+				};
+				return this.createUserQueue(newQueueData);
+			}
+
+			const tracks = currentQueue.queue_tracks;
+			
+			if (position !== undefined && position >= 0 && position <= tracks.length) {
+				tracks.splice(position, 0, track);
+			} else {
+				tracks.push(track);
+			}
+
+			const updates: UserQueueUpdate = {
+				queue_tracks: JSON.stringify(tracks),
+				last_updated: new Date().toISOString()
+			};
+
+			return this.updateUserQueue(currentQueue.$id, updates);
+		} catch (error) {
+			console.error('Failed to add track to queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Remove track from queue
+	 */
+	async removeTrackFromQueue(userId: string, instanceId: string, trackIndex: number): Promise<ParsedUserQueue> {
+		try {
+			const currentQueue = await this.getUserQueue(userId, instanceId);
+			
+			if (!currentQueue) {
+				throw new Error('Queue not found');
+			}
+
+			const tracks = currentQueue.queue_tracks;
+			if (trackIndex < 0 || trackIndex >= tracks.length) {
+				throw new Error('Invalid track index');
+			}
+
+			tracks.splice(trackIndex, 1);
+
+			// Adjust current_index if needed
+			let newCurrentIndex = currentQueue.current_index;
+			if (trackIndex < currentQueue.current_index) {
+				newCurrentIndex = Math.max(0, currentQueue.current_index - 1);
+			} else if (trackIndex === currentQueue.current_index && trackIndex === tracks.length) {
+				newCurrentIndex = Math.max(0, tracks.length - 1);
+			}
+
+			const updates: UserQueueUpdate = {
+				queue_tracks: JSON.stringify(tracks),
+				current_index: newCurrentIndex,
+				last_updated: new Date().toISOString()
+			};
+
+			return this.updateUserQueue(currentQueue.$id, updates);
+		} catch (error) {
+			console.error('Failed to remove track from queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Set current playing track index
+	 */
+	async setCurrentTrackIndex(userId: string, instanceId: string, index: number): Promise<ParsedUserQueue> {
+		try {
+			const currentQueue = await this.getUserQueue(userId, instanceId);
+			
+			if (!currentQueue) {
+				throw new Error('Queue not found');
+			}
+
+			if (index < 0 || index >= currentQueue.queue_tracks.length) {
+				throw new Error('Invalid track index');
+			}
+
+			const updates: UserQueueUpdate = {
+				current_index: index,
+				last_updated: new Date().toISOString()
+			};
+
+			return this.updateUserQueue(currentQueue.$id, updates);
+		} catch (error) {
+			console.error('Failed to set current track index:', error);
+			throw error;
+		}
+	}
+	/**
+	 * Update queue settings (shuffle, repeat)
+	 */
+	async updateQueueSettings(userId: string, instanceId: string, settings: { shuffle_enabled?: boolean; repeat_mode?: RepeatMode }): Promise<ParsedUserQueue> {
+		try {
+			const currentQueue = await this.getUserQueue(userId, instanceId);
+			
+			if (!currentQueue) {
+				throw new Error('Queue not found');
+			}
+
+			const updates: UserQueueUpdate = {
+				...settings,
+				last_updated: new Date().toISOString()
+			};
+
+			return this.updateUserQueue(currentQueue.$id, updates);
+		} catch (error) {
+			console.error('Failed to update queue settings:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Clear queue
+	 */
+	async clearQueue(userId: string, instanceId: string): Promise<ParsedUserQueue> {
+		try {
+			const currentQueue = await this.getUserQueue(userId, instanceId);
+			
+			if (!currentQueue) {
+				throw new Error('Queue not found');
+			}
+
+			const updates: UserQueueUpdate = {
+				queue_tracks: JSON.stringify([]),
+				current_index: 0,
+				last_updated: new Date().toISOString()
+			};
+
+			return this.updateUserQueue(currentQueue.$id, updates);
+		} catch (error) {
+			console.error('Failed to clear queue:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get all queues for a user (across instances)
+	 */
+	async getUserQueues(userId: string): Promise<ParsedUserQueue[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.orderDesc('last_updated')
+				]
+			);
+
+			return response.documents.map((doc: any) => this.parseUserQueue(doc as unknown as UserQueue));
+		} catch (error) {
+			console.error('Failed to get user queues:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Delete user queue
+	 */
+	async deleteUserQueue(queueId: string): Promise<void> {
+		try {
+			await databases.deleteDocument(DATABASE_ID, this.collectionId, queueId);
+		} catch (error) {
+			console.error('Failed to delete user queue:', error);
+			throw error;
+		}
+	}
+}

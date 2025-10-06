@@ -1,0 +1,26 @@
+{
+  "$id": "user-login-handler",
+  "name": "DJAMMS User Login Handler",
+  "runtime": "node-18.0",
+  "execute": ["any"],
+  "events": [
+    "users.*.sessions.*.create"
+  ],
+  "schedule": "",
+  "timeout": 30,
+  "enabled": true,
+  "logging": true,
+  "entrypoint": "src/main.js",
+  "commands": "npm install",
+  "ignore": [
+    "node_modules",
+    ".npm",
+    ".git",
+    "*.log",
+    "*.md"
+  ],
+  "variables": {
+    "APPWRITE_DATABASE_ID": "68cc92d30024e1b6eeb6",
+    "NODE_ENV": "production"
+  }
+}

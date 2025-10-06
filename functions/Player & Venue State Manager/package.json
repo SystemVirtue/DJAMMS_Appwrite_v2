@@ -1,0 +1,26 @@
+{
+  "name": "djamms-player-venue-state-manager",
+  "version": "1.0.0",
+  "description": "Player & Venue State Manager - Real-time player state updates and queue management",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "appwrite functions createDeployment --functionId player-venue-state-manager --code . --activate true"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": [
+    "appwrite",
+    "djamms",
+    "player-state",
+    "venue-management",
+    "real-time",
+    "queue-management",
+    "serverless"
+  ],
+  "author": "DJAMMS Team",
+  "license": "MIT"
+}

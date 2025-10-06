@@ -1,8 +1,8 @@
-import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import { databases, DATABASE_ID, COLLECTIONS } from '../utils/appwrite';
 import type { 
 	UserPlayHistory, 
 	UserPlayHistoryCreate,
-	PlaylistTrack 
+	Track as PlaylistTrack 
 } from '$lib/types';
 import { Query } from 'appwrite';
 

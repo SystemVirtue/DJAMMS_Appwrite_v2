@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+// List users documents and print keys to verify prefs vs preferences
+import dotenv from 'dotenv';
+dotenv.config();
+import { Client, Databases } from 'node-appwrite';
+import wrapDatabases from './wrapDatabases.mjs';
+
+const client = new Client()
+  .setEndpoint(process.env.APPWRITE_ENDPOINT)
+  .setProject(process.env.APPWRITE_PROJECT_ID)
+  .setKey(process.env.APPWRITE_API_KEY);
+
+const databases = wrapDatabases(new Databases(client));
+const DB = process.env.APPWRITE_DATABASE_ID;
+
+(async function () {
+  try {
+    const list = await databases.listDocuments(DB, 'users');
+    const docs = list.documents || [];
+    console.log(`Found ${docs.length} documents`);
+    for (const d of docs) {
+      console.log('---');
+      console.log('id:', d.$id);
+      console.log('keys:', Object.keys(d).join(', '));
+      console.log('prefs present:', Object.prototype.hasOwnProperty.call(d, 'prefs'));
+      console.log('preferences present:', Object.prototype.hasOwnProperty.call(d, 'preferences'));
+      if (Object.prototype.hasOwnProperty.call(d, 'prefs')) {
+        console.log('prefs length:', String(d.prefs).length);
+      }
+    }
+  } catch (e) {
+    console.error('Error listing users:', e);
+    process.exit(1);
+  }
+})();

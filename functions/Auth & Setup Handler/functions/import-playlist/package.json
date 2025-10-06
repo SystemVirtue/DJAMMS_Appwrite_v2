@@ -1,0 +1,14 @@
+{
+  "name": "import-playlist",
+  "version": "1.0.0",
+  "description": "Appwrite function to import YouTube playlist items into a playlist document",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "archiver": "^5.3.1",
+    "node-appwrite": "^10.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}

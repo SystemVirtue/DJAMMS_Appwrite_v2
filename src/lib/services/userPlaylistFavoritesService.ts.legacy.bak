@@ -1,0 +1,401 @@
+import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import type { 
+	UserPlaylistFavorites, 
+	UserPlaylistFavoritesCreate, 
+	UserPlaylistFavoritesUpdate 
+} from '$lib/types.ts';
+import { Query } from 'appwrite';
+
+/**
+ * Service for managing user playlist favorites in Appwrite
+ */
+export class UserPlaylistFavoritesService {
+	private static instance: UserPlaylistFavoritesService;
+
+	static getInstance(): UserPlaylistFavoritesService {
+		if (!UserPlaylistFavoritesService.instance) {
+			UserPlaylistFavoritesService.instance = new UserPlaylistFavoritesService();
+		}
+		return UserPlaylistFavoritesService.instance;
+	}
+
+	private readonly collectionId = COLLECTIONS.USER_PLAYLIST_FAVORITES;
+
+	/**
+	 * Add playlist to favorites
+	 */
+	async addToFavorites(favData: UserPlaylistFavoritesCreate): Promise<UserPlaylistFavorites> {
+		try {
+			const response = await databases.createDocument(
+				DATABASE_ID,
+				this.collectionId,
+				'unique()',
+				favData
+			);
+
+			return response as unknown as UserPlaylistFavorites;
+		} catch (error) {
+			console.error('Failed to add to favorites:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Toggle playlist favorite status
+	 */
+	async toggleFavorite(userId: string, playlistId: string): Promise<UserPlaylistFavorites> {
+		try {
+			const existing = await this.getUserPlaylistFavorite(userId, playlistId);
+			
+			if (existing) {
+				// Update existing favorite status
+				const updates: UserPlaylistFavoritesUpdate = {
+					is_favorite: !existing.is_favorite,
+					last_accessed: new Date().toISOString()
+				};
+				return this.updateFavorite(existing.$id, updates);
+			} else {
+				// Create new favorite entry
+				const favData: UserPlaylistFavoritesCreate = {
+					user_id: userId,
+					playlist_id: playlistId,
+					is_favorite: true,
+					added_at: new Date().toISOString(),
+					last_accessed: new Date().toISOString()
+				};
+				return this.addToFavorites(favData);
+			}
+		} catch (error) {
+			console.error('Failed to toggle favorite:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get user's favorite status for a playlist
+	 */
+	async getUserPlaylistFavorite(userId: string, playlistId: string): Promise<UserPlaylistFavorites | null> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.equal('playlist_id', playlistId),
+					Query.limit(1)
+				]
+			);
+
+			if (response.documents.length > 0) {
+				return response.documents[0] as unknown as UserPlaylistFavorites;
+			}
+
+			return null;
+		} catch (error) {
+			console.error('Failed to get user playlist favorite:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Check if playlist is favorited by user
+	 */
+	async isPlaylistFavorited(userId: string, playlistId: string): Promise<boolean> {
+		try {
+			const favorite = await this.getUserPlaylistFavorite(userId, playlistId);
+			return favorite?.is_favorite === true;
+		} catch (error) {
+			console.error('Failed to check if playlist is favorited:', error);
+			return false;
+		}
+	}
+
+	/**
+	 * Get all user favorites
+	 */
+	async getUserFavorites(userId: string, favoritesOnly = true): Promise<UserPlaylistFavorites[]> {
+		try {
+			const queries = [Query.equal('user_id', userId)];
+			
+			if (favoritesOnly) {
+				queries.push(Query.equal('is_favorite', true));
+			}
+			
+			queries.push(Query.orderDesc('added_at'));
+
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				queries
+			);
+
+			return response.documents as unknown as UserPlaylistFavorites[];
+		} catch (error) {
+			console.error('Failed to get user favorites:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Update favorite entry
+	 */
+	async updateFavorite(favoriteId: string, updates: UserPlaylistFavoritesUpdate): Promise<UserPlaylistFavorites> {
+		try {
+			const response = await databases.updateDocument(
+				DATABASE_ID,
+				this.collectionId,
+				favoriteId,
+				updates
+			);
+
+			return response as unknown as UserPlaylistFavorites;
+		} catch (error) {
+			console.error('Failed to update favorite:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Rate a playlist
+	 */
+	async ratePlaylist(userId: string, playlistId: string, rating: number): Promise<UserPlaylistFavorites> {
+		try {
+			if (rating < 1 || rating > 5) {
+				throw new Error('Rating must be between 1 and 5');
+			}
+
+			const existing = await this.getUserPlaylistFavorite(userId, playlistId);
+			
+			if (existing) {
+				const updates: UserPlaylistFavoritesUpdate = {
+					personal_rating: rating,
+					last_accessed: new Date().toISOString()
+				};
+				return this.updateFavorite(existing.$id, updates);
+			} else {
+				// Create new entry with rating
+				const favData: UserPlaylistFavoritesCreate = {
+					user_id: userId,
+					playlist_id: playlistId,
+					is_favorite: true,
+					personal_rating: rating,
+					added_at: new Date().toISOString(),
+					last_accessed: new Date().toISOString()
+				};
+				return this.addToFavorites(favData);
+			}
+		} catch (error) {
+			console.error('Failed to rate playlist:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Add custom tags to playlist
+	 */
+	async addCustomTags(userId: string, playlistId: string, tags: string): Promise<UserPlaylistFavorites> {
+		try {
+			const existing = await this.getUserPlaylistFavorite(userId, playlistId);
+			
+			if (existing) {
+				const updates: UserPlaylistFavoritesUpdate = {
+					custom_tags: tags,
+					last_accessed: new Date().toISOString()
+				};
+				return this.updateFavorite(existing.$id, updates);
+			} else {
+				// Create new entry with tags
+				const favData: UserPlaylistFavoritesCreate = {
+					user_id: userId,
+					playlist_id: playlistId,
+					is_favorite: true,
+					custom_tags: tags,
+					added_at: new Date().toISOString(),
+					last_accessed: new Date().toISOString()
+				};
+				return this.addToFavorites(favData);
+			}
+		} catch (error) {
+			console.error('Failed to add custom tags:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Update last accessed time
+	 */
+	async updateLastAccessed(userId: string, playlistId: string): Promise<UserPlaylistFavorites | null> {
+		try {
+			const existing = await this.getUserPlaylistFavorite(userId, playlistId);
+			
+			if (existing) {
+				const updates: UserPlaylistFavoritesUpdate = {
+					last_accessed: new Date().toISOString()
+				};
+				return this.updateFavorite(existing.$id, updates);
+			}
+
+			return null;
+		} catch (error) {
+			console.error('Failed to update last accessed:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Get recently accessed playlists
+	 */
+	async getRecentlyAccessed(userId: string, limit = 20): Promise<UserPlaylistFavorites[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.isNotNull('last_accessed'),
+					Query.orderDesc('last_accessed'),
+					Query.limit(limit)
+				]
+			);
+
+			return response.documents as unknown as UserPlaylistFavorites[];
+		} catch (error) {
+			console.error('Failed to get recently accessed playlists:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get playlists by rating
+	 */
+	async getPlaylistsByRating(userId: string, minRating = 1, maxRating = 5): Promise<UserPlaylistFavorites[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.greaterThanEqual('personal_rating', minRating),
+					Query.lessThanEqual('personal_rating', maxRating),
+					Query.orderDesc('personal_rating')
+				]
+			);
+
+			return response.documents as unknown as UserPlaylistFavorites[];
+		} catch (error) {
+			console.error('Failed to get playlists by rating:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Search favorites by custom tags
+	 */
+	async searchByTags(userId: string, tagSearchTerm: string): Promise<UserPlaylistFavorites[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.search('custom_tags', tagSearchTerm),
+					Query.orderDesc('added_at')
+				]
+			);
+
+			return response.documents as unknown as UserPlaylistFavorites[];
+		} catch (error) {
+			console.error('Failed to search by tags:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Delete favorite entry
+	 */
+	async deleteFavorite(favoriteId: string): Promise<void> {
+		try {
+			await databases.deleteDocument(DATABASE_ID, this.collectionId, favoriteId);
+		} catch (error) {
+			console.error('Failed to delete favorite:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Remove all favorites for a user (cleanup)
+	 */
+	async deleteAllUserFavorites(userId: string): Promise<number> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.limit(100) // Process in batches
+				]
+			);
+
+			let deletedCount = 0;
+			for (const doc of response.documents) {
+				await databases.deleteDocument(DATABASE_ID, this.collectionId, doc.$id);
+				deletedCount++;
+			}
+
+			return deletedCount;
+		} catch (error) {
+			console.error('Failed to delete all user favorites:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get favorite statistics for user
+	 */
+	async getFavoriteStats(userId: string): Promise<{
+		totalFavorites: number;
+		totalRated: number;
+		averageRating: number;
+		topTags: Array<{ tag: string; count: number }>;
+	}> {
+		try {
+			const favorites = await this.getUserFavorites(userId, false); // Get all, not just favorites
+			
+			const totalFavorites = favorites.filter(f => f.is_favorite).length;
+			const ratedFavorites = favorites.filter(f => f.personal_rating && f.personal_rating > 0);
+			const totalRated = ratedFavorites.length;
+			const averageRating = totalRated > 0 
+				? ratedFavorites.reduce((sum, f) => sum + (f.personal_rating || 0), 0) / totalRated 
+				: 0;
+
+			// Parse and count tags
+			const tagCounts = new Map<string, number>();
+			favorites.forEach(f => {
+				if (f.custom_tags) {
+					const tags = f.custom_tags.split(',').map(tag => tag.trim().toLowerCase());
+					tags.forEach(tag => {
+						if (tag) {
+							const count = tagCounts.get(tag) || 0;
+							tagCounts.set(tag, count + 1);
+						}
+					});
+				}
+			});
+
+			const topTags = Array.from(tagCounts.entries())
+				.map(([tag, count]) => ({ tag, count }))
+				.sort((a, b) => b.count - a.count)
+				.slice(0, 10);
+
+			return {
+				totalFavorites,
+				totalRated,
+				averageRating,
+				topTags
+			};
+		} catch (error) {
+			console.error('Failed to get favorite stats:', error);
+			throw error;
+		}
+	}
+}

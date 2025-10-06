@@ -1,4 +1,6 @@
-import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import { databases, DATABASE_ID, COLLECTIONS } from '../utils/appwrite';
+// If your utils folder is not at ../utils/, update the path accordingly.
+// Make sure that appwrite.ts exists and exports databases, DATABASE_ID, and COLLECTIONS.
 import type { 
 	UserPlaylistFavorites, 
 	UserPlaylistFavoritesCreate, 
@@ -177,6 +179,7 @@ export class UserPlaylistFavoritesService {
 				const favData: UserPlaylistFavoritesCreate = {
 					user_id: userId,
 					playlist_id: playlistId,
+					is_favorite: true,
 					personal_rating: rating,
 					added_at: new Date().toISOString(),
 					last_accessed: new Date().toISOString()
@@ -207,6 +210,7 @@ export class UserPlaylistFavoritesService {
 				const favData: UserPlaylistFavoritesCreate = {
 					user_id: userId,
 					playlist_id: playlistId,
+					is_favorite: true,
 					custom_tags: tags,
 					added_at: new Date().toISOString(),
 					last_accessed: new Date().toISOString()

@@ -1,0 +1,334 @@
+import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+import type { 
+	UserPlayHistory, 
+	UserPlayHistoryCreate,
+	Track as PlaylistTrack 
+} from '$lib/types.ts';
+import { Query } from 'appwrite';
+
+/**
+ * Service for managing user play history in Appwrite
+ */
+export class UserPlayHistoryService {
+	private static instance: UserPlayHistoryService;
+
+	static getInstance(): UserPlayHistoryService {
+		if (!UserPlayHistoryService.instance) {
+			UserPlayHistoryService.instance = new UserPlayHistoryService();
+		}
+		return UserPlayHistoryService.instance;
+	}
+
+	private readonly collectionId = COLLECTIONS.USER_PLAY_HISTORY;
+
+	/**
+	 * Record a track play
+	 */
+	async recordTrackPlay(playData: UserPlayHistoryCreate): Promise<UserPlayHistory> {
+		try {
+			const response = await databases.createDocument(
+				DATABASE_ID,
+				this.collectionId,
+				'unique()',
+				playData
+			);
+
+			return response as unknown as UserPlayHistory;
+		} catch (error) {
+			console.error('Failed to record track play:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Record track play from PlaylistTrack
+	 */
+	async recordTrackPlayFromTrack(
+		userId: string,
+		instanceId: string,
+		track: PlaylistTrack,
+		playlistId?: string,
+		sessionId?: string,
+		playedDuration = 0,
+		wasSkipped = false
+	): Promise<UserPlayHistory> {
+		const completionPercentage = track.duration > 0 ? Math.round((playedDuration / track.duration) * 100) : 0;
+
+		const playData: UserPlayHistoryCreate = {
+			user_id: userId,
+			instance_id: instanceId,
+			track_id: track.video_id,
+			playlist_id: playlistId,
+			track_title: track.title,
+			track_artist: track.artist,
+			track_duration: track.duration,
+			played_duration: playedDuration,
+			completion_percentage: Math.min(100, completionPercentage),
+			played_at: new Date().toISOString(),
+			session_id: sessionId,
+			was_skipped: wasSkipped
+		};
+
+		return this.recordTrackPlay(playData);
+	}
+
+	/**
+	 * Get user play history
+	 */
+	async getUserPlayHistory(userId: string, limit = 50, offset = 0): Promise<UserPlayHistory[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.orderDesc('played_at'),
+					Query.limit(limit),
+					Query.offset(offset)
+				]
+			);
+
+			return response.documents as unknown as UserPlayHistory[];
+		} catch (error) {
+			console.error('Failed to get user play history:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get recently played tracks (unique tracks)
+	 */
+	async getRecentlyPlayedTracks(userId: string, limit = 20): Promise<UserPlayHistory[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.orderDesc('played_at'),
+					Query.limit(limit * 3) // Get more to filter duplicates
+				]
+			);
+
+			// Remove duplicates by track_id, keeping the most recent
+			const uniqueTracks = new Map<string, UserPlayHistory>();
+			for (const track of response.documents as unknown as UserPlayHistory[]) {
+				if (!uniqueTracks.has(track.track_id)) {
+					uniqueTracks.set(track.track_id, track);
+				}
+			}
+
+			return Array.from(uniqueTracks.values()).slice(0, limit);
+		} catch (error) {
+			console.error('Failed to get recently played tracks:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get play history for specific playlist
+	 */
+	async getPlaylistPlayHistory(userId: string, playlistId: string, limit = 50): Promise<UserPlayHistory[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.equal('playlist_id', playlistId),
+					Query.orderDesc('played_at'),
+					Query.limit(limit)
+				]
+			);
+
+			return response.documents as unknown as UserPlayHistory[];
+		} catch (error) {
+			console.error('Failed to get playlist play history:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get listening stats for user
+	 */
+	async getUserListeningStats(userId: string, daysBack = 30): Promise<{
+		totalTracks: number;
+		totalListeningTime: number;
+		averageCompletionRate: number;
+		topArtists: Array<{ artist: string; playCount: number }>;
+		topTracks: Array<{ title: string; artist: string; playCount: number }>;
+	}> {
+		try {
+			const cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.greaterThan('played_at', cutoffDate.toISOString()),
+					Query.limit(1000) // Get a large sample
+				]
+			);
+
+			const plays = response.documents as unknown as UserPlayHistory[];
+			
+			const totalTracks = plays.length;
+			const totalListeningTime = plays.reduce((sum, play) => sum + play.played_duration, 0);
+			const averageCompletionRate = plays.length > 0 
+				? plays.reduce((sum, play) => sum + play.completion_percentage, 0) / plays.length 
+				: 0;
+
+			// Count by artist
+			const artistCounts = new Map<string, number>();
+			const trackCounts = new Map<string, { title: string; artist: string; count: number }>();
+
+			plays.forEach(play => {
+				// Artist counts
+				const currentArtistCount = artistCounts.get(play.track_artist) || 0;
+				artistCounts.set(play.track_artist, currentArtistCount + 1);
+
+				// Track counts
+				const trackKey = `${play.track_id}-${play.track_title}`;
+				const existing = trackCounts.get(trackKey);
+				if (existing) {
+					existing.count += 1;
+				} else {
+					trackCounts.set(trackKey, {
+						title: play.track_title,
+						artist: play.track_artist,
+						count: 1
+					});
+				}
+			});
+
+			// Sort and get top items
+			const topArtists = Array.from(artistCounts.entries())
+				.map(([artist, playCount]) => ({ artist, playCount }))
+				.sort((a, b) => b.playCount - a.playCount)
+				.slice(0, 10);
+
+			const topTracks = Array.from(trackCounts.values())
+				.sort((a, b) => b.count - a.count)
+				.slice(0, 10)
+				.map(track => ({ 
+					title: track.title, 
+					artist: track.artist, 
+					playCount: track.count 
+				}));
+
+			return {
+				totalTracks,
+				totalListeningTime,
+				averageCompletionRate,
+				topArtists,
+				topTracks
+			};
+		} catch (error) {
+			console.error('Failed to get user listening stats:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get play history for specific instance
+	 */
+	async getInstancePlayHistory(userId: string, instanceId: string, limit = 50): Promise<UserPlayHistory[]> {
+		try {
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.equal('instance_id', instanceId),
+					Query.orderDesc('played_at'),
+					Query.limit(limit)
+				]
+			);
+
+			return response.documents as unknown as UserPlayHistory[];
+		} catch (error) {
+			console.error('Failed to get instance play history:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get most played tracks (across all users - for admin/analytics)
+	 */
+	async getMostPlayedTracks(limit = 20): Promise<Array<{ track_id: string; title: string; artist: string; playCount: number }>> {
+		try {
+			// Note: This would be better implemented as an Appwrite function for performance
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.orderDesc('played_at'),
+					Query.limit(1000) // Limited sample for performance
+				]
+			);
+
+			const plays = response.documents as unknown as UserPlayHistory[];
+			const trackCounts = new Map<string, { track_id: string; title: string; artist: string; count: number }>();
+
+			plays.forEach(play => {
+				const existing = trackCounts.get(play.track_id);
+				if (existing) {
+					existing.count += 1;
+				} else {
+					trackCounts.set(play.track_id, {
+						track_id: play.track_id,
+						title: play.track_title,
+						artist: play.track_artist,
+						count: 1
+					});
+				}
+			});
+
+			return Array.from(trackCounts.values())
+				.sort((a, b) => b.count - a.count)
+				.slice(0, limit)
+				.map(track => ({ 
+					track_id: track.track_id,
+					title: track.title, 
+					artist: track.artist, 
+					playCount: track.count 
+				}));
+		} catch (error) {
+			console.error('Failed to get most played tracks:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Delete old play history (data cleanup)
+	 */
+	async deleteOldPlayHistory(userId: string, daysOld = 365): Promise<number> {
+		try {
+			const cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+			const response = await databases.listDocuments(
+				DATABASE_ID,
+				this.collectionId,
+				[
+					Query.equal('user_id', userId),
+					Query.lessThan('played_at', cutoffDate.toISOString()),
+					Query.limit(100) // Process in batches
+				]
+			);
+
+			let deletedCount = 0;
+			for (const doc of response.documents) {
+				await databases.deleteDocument(DATABASE_ID, this.collectionId, doc.$id);
+				deletedCount++;
+			}
+
+			return deletedCount;
+		} catch (error) {
+			console.error('Failed to delete old play history:', error);
+			throw error;
+		}
+	}
+}

@@ -36,9 +36,10 @@
   },
   "type": "module",
   "dependencies": {
+    "@sveltejs/adapter-static": "^3.0.9",
     "appwrite": "^13.0.0",
     "dotenv": "^17.2.2",
     "lucide-svelte": "^0.344.0",
-    "node-appwrite": "^19.0.0"
+    "node-appwrite": "^19.1.0"
   }
 }

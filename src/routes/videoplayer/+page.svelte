@@ -5,7 +5,7 @@
 	import { windowManager } from '$lib/services/windowManager';
 	import { getDJAMMSService } from '$lib/services/serviceInit';
 	import { client, DATABASE_ID } from '$lib/utils/appwrite';
-	import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize2, Clock, Users, CheckCircle, AlertCircle } from 'lucide-svelte';
+	import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize2, Clock, Users, CheckCircle, AlertCircle, Music } from 'lucide-svelte';
 	import { browser } from '$app/environment';
 	import { InstanceIds } from '$lib/utils/idGenerator';
 	import type { PageData } from './$types';
@@ -29,18 +29,11 @@
 	
 	// Load YouTube IFrame API
 	onMount(async () => {
-		// Check authentication first
-		if (!$djammsStore.isAuthenticated) {
-			console.log('🔐 VideoPlayer: User not authenticated, redirecting to dashboard');
-			window.location.href = '/dashboard';
-			return;
-		}
-
 		// Check for duplicate instance first
 		if (browser && windowManager.shouldPreventDuplicate()) {
 			// Show alert and redirect
 			alert('Video Player is already open in another window. Redirecting to dashboard.');
-			window.location.href = '/dashboard';
+			window.location.href = '/djamms-dashboard';
 			return;
 		}
 
@@ -70,18 +63,31 @@
 
 	// Load YouTube IFrame API first
 	if (browser && !window.YT) {
-		const script = document.createElement('script');
-		script.src = 'https://www.youtube.com/iframe_api';
-		document.head.appendChild(script);			// Wait for API to load
-			window.onYouTubeIframeAPIReady = () => {
-				console.log('🎵 YouTube API loaded');
-				// Try to load first track and initialize player
-				tryInitializeWithPlaylist();
+		try {
+			const script = document.createElement('script');
+			script.src = 'https://www.youtube.com/iframe_api';
+			script.onerror = (error) => {
+				console.error('🎵 VideoPlayer: Failed to load YouTube API script:', error);
 			};
-		} else {
-			// API already loaded, try to initialize
-			tryInitializeWithPlaylist();
+			document.head.appendChild(script);
+			
+			// Wait for API to load
+			window.onYouTubeIframeAPIReady = () => {
+				try {
+					console.log('🎵 YouTube API loaded');
+					// Try to load first track and initialize player
+					tryInitializeWithPlaylist();
+				} catch (error) {
+					console.error('🎵 VideoPlayer: Error in YouTube API ready callback:', error);
+				}
+			};
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error loading YouTube API:', error);
 		}
+	} else {
+		// API already loaded, try to initialize
+		tryInitializeWithPlaylist();
+	}
 	});
 
 	// Function to try initializing with playlist data
@@ -90,7 +96,37 @@
 
 		try {
 			// Check if there's already a current video from venue state
-			const currentVenue = $djammsStore.currentVenue;
+			let currentVenue = $djammsStore.currentVenue;
+			
+			// If no venue is set, load user venues and set the first one (or default)
+			if (!currentVenue) {
+				console.log('🎵 VideoPlayer: No current venue set, loading user venues...');
+				try {
+					const user = $djammsStore.currentUser;
+					if (user) {
+						await djammsStore.loadUserVenues(user.$id);
+						const userVenues = $djammsStore.userVenues;
+						
+						if (userVenues.length > 0) {
+							// Set the first venue as current (or find 'default' if it exists)
+							const defaultVenue = userVenues.find(v => v.venue_id === 'default') || userVenues[0];
+							console.log('🎵 VideoPlayer: Setting current venue to:', defaultVenue.venue_name);
+							await djammsStore.setCurrentVenue(defaultVenue.$id);
+							
+							// Wait a moment for the venue state to update
+							await new Promise(resolve => setTimeout(resolve, 100));
+							currentVenue = $djammsStore.currentVenue;
+						} else {
+							console.log('🎵 VideoPlayer: No venues found for user');
+						}
+					} else {
+						console.log('🎵 VideoPlayer: No authenticated user');
+					}
+				} catch (error) {
+					console.error('🎵 VideoPlayer: Failed to load/set venue:', error);
+				}
+			}
+			
 			if (currentVenue && currentVenue.now_playing) {
 				console.log('🎵 VideoPlayer: Found current track, loading:', currentVenue.now_playing.title);
 				loadNewVideo(currentVenue.now_playing.video_id, currentVenue.now_playing.title);
@@ -100,14 +136,33 @@
 				// Check if we have songs available - this will trigger fallback loading if needed
 				try {
 					await djammsStore.loadPlaylists();
-					console.log('🎵 VideoPlayer: Playlists loading initiated, queue manager should start playback');
+					console.log('🎵 VideoPlayer: Playlists loaded, checking for available tracks...');
+
+					// After loading playlists, check if we now have a current track or venue queue
+					const updatedVenue = $djammsStore.currentVenue;
+					if (updatedVenue && updatedVenue.now_playing) {
+						console.log('🎵 VideoPlayer: Found track after playlist load, loading:', updatedVenue.now_playing.title);
+						loadNewVideo(updatedVenue.now_playing.video_id, updatedVenue.now_playing.title);
+					} else if (updatedVenue && updatedVenue.active_queue && updatedVenue.active_queue.length > 0) {
+						console.log('🎵 VideoPlayer: Found active queue, loading first track');
+						const firstTrack = updatedVenue.active_queue[0];
+						loadNewVideo(firstTrack.video_id, firstTrack.title || 'Unknown Track');
+					} else {
+						console.log('🎵 VideoPlayer: No tracks available after playlist load, showing empty state');
+						// Initialize player with empty state to hide loading spinner
+						isPlayerReady = true;
+					}
 				} catch (error) {
 					console.error('🎵 VideoPlayer: Failed to load playlists:', error);
-					console.error('🎵 VideoPlayer: Video player will show "no songs in queue" until playlist is loaded');
+					console.error('🎵 VideoPlayer: Showing empty state due to load failure');
+					// Initialize player with empty state to hide loading spinner
+					isPlayerReady = true;
 				}
 			}
 		} catch (error) {
 			console.error('🎵 VideoPlayer: Error checking current state:', error);
+			// Initialize player with empty state to hide loading spinner
+			isPlayerReady = true;
 		}
 	}
 
@@ -136,96 +191,122 @@
 		// Player state cleanup is handled through venue state management
 		
 		// Cleanup player
-		if (player && player.destroy) {
-			player.destroy();
+		try {
+			if (player && player.destroy) {
+				player.destroy();
+			}
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error destroying player:', error);
 		}
 	});
 
 	// Function to get the first track from venue queue
 	function loadFirstTrackFromQueue() {
-		const venue = $djammsStore.currentVenue;
-		if (venue && venue.active_queue && venue.active_queue.length > 0) {
-			// Get the first track from the active queue
-			const firstTrack = venue.active_queue[0];
+		try {
+			const venue = $djammsStore.currentVenue;
+			if (venue && venue.active_queue && venue.active_queue.length > 0) {
+				// Get the first track from the active queue
+				const firstTrack = venue.active_queue[0];
 
-			console.log('🎵 VideoPlayer: Loading first track from venue queue:', firstTrack.title);
-			currentVideo = firstTrack.video_id;
+				console.log('🎵 VideoPlayer: Loading first track from venue queue:', firstTrack.title);
+				currentVideo = firstTrack.video_id;
 
-			// Send command to update now playing in venue
-			djammsStore.sendCommand('update_now_playing', firstTrack);
+				// Send command to update now playing in venue
+				djammsStore.sendCommand('update_now_playing', firstTrack);
 
-			return firstTrack;
-		} else {
-			console.warn('🎵 VideoPlayer: No tracks available in current playlist');
+				return firstTrack;
+			} else {
+				console.warn('🎵 VideoPlayer: No tracks available in current playlist');
+				return null;
+			}
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error loading first track from queue:', error);
 			return null;
 		}
 	}
 
 	function initializePlayer() {
-		if (!playerContainer) return;
+		try {
+			if (!playerContainer) return;
 
-		// currentVideo should already be set by handleTrackChangeRequest
-		if (!currentVideo) {
-			console.error('🎵 VideoPlayer: Cannot initialize - no video ID available');
-			return;
-		}
-
-		console.log('🎵 VideoPlayer: Initializing YouTube player with video:', currentVideo);
-
-		player = new window.YT.Player(playerContainer, {
-			height: '100%',
-			width: '100%',
-			videoId: currentVideo,
-			playerVars: {
-				autoplay: shouldAutoPlay ? 1 : 0,
-				controls: 0, // Hide default controls
-				disablekb: 1,
-				fs: 0,
-				iv_load_policy: 3,
-				modestbranding: 1,
-				rel: 0,
-				showinfo: 0
-			},
-			events: {
-				onReady: onPlayerReady,
-				onStateChange: onPlayerStateChange
+			// currentVideo should already be set by handleTrackChangeRequest
+			if (!currentVideo) {
+				console.error('🎵 VideoPlayer: Cannot initialize - no video ID available');
+				return;
 			}
-		});
+
+			console.log('🎵 VideoPlayer: Initializing YouTube player with video:', currentVideo);
+
+			player = new window.YT.Player(playerContainer, {
+				height: '100%',
+				width: '100%',
+				videoId: currentVideo,
+				playerVars: {
+					autoplay: shouldAutoPlay ? 1 : 0,
+					controls: 0, // Hide default controls
+					disablekb: 1,
+					fs: 0,
+					iv_load_policy: 3,
+					modestbranding: 1,
+					rel: 0,
+					showinfo: 0
+				},
+				events: {
+					onReady: onPlayerReady,
+					onStateChange: onPlayerStateChange
+				}
+			});
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error initializing player:', error);
+			// Try to reinitialize after a delay
+			setTimeout(() => {
+				console.log('🎵 VideoPlayer: Retrying player initialization...');
+				initializePlayer();
+			}, 2000);
+		}
 	}
 
 	function onPlayerReady() {
-		isPlayerReady = true;
-		player.setVolume(75);
-		
-		// Set up periodic status updates
-		if (statusUpdateInterval) {
-			clearInterval(statusUpdateInterval);
+		try {
+			isPlayerReady = true;
+			player.setVolume(75);
+			
+			// Set up periodic status updates
+			if (statusUpdateInterval) {
+				clearInterval(statusUpdateInterval);
+			}
+			statusUpdateInterval = setInterval(updatePlayerProgress, 1000);
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error in onPlayerReady:', error);
 		}
-		statusUpdateInterval = setInterval(updatePlayerProgress, 1000);
 	}
 
 	function onPlayerStateChange(event: any) {
-		const state = event.data;
-		const isPlaying = state === window.YT.PlayerState.PLAYING;
-		const isEnded = state === window.YT.PlayerState.ENDED;
-		
-		// Handle video end - trigger queue progression
-		if (isEnded) {
-			console.log('🎵 Video ended, signaling ready for next song');
-			// Send command to skip to next track
-			djammsStore.sendCommand('skip_next');
-			return;
-		}
+		try {
+			const state = event.data;
+			const isPlaying = state === window.YT.PlayerState.PLAYING;
+			const isEnded = state === window.YT.PlayerState.ENDED;
+			
+			// Handle video end - trigger queue progression
+			if (isEnded) {
+				console.log('🎵 Video ended, signaling ready for next song');
+				// Send command to skip to next track
+				djammsStore.sendCommand('skip_next');
+				return;
+			}
 
-		// Send command to update player state
-		djammsStore.sendCommand('update_player_state', {
-			status: isPlaying ? 'playing' : 'paused',
-			position: currentTime
-		});
+			// Send command to update player state
+			djammsStore.sendCommand('update_player_state', {
+				status: isPlaying ? 'playing' : 'paused',
+				position: currentTime
+			});
 
-		// Broadcast state change to all windows
-		if (browser) {
-			broadcastStateChange(isPlaying);
+			// Broadcast state change to all windows
+			if (browser) {
+				broadcastStateChange(isPlaying);
+			}
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error in onPlayerStateChange:', error);
 		}
 	}
 
@@ -239,21 +320,25 @@
 
 	// Update player progress periodically
 	function updatePlayerProgress() {
-		if (!isPlayerReady || !player) return;
-		
-		const currentVideoTime = player.getCurrentTime();
-		const videoDuration = player.getDuration();
-		const youtubePlayerState = player.getPlayerState();
-		const isPlaying = youtubePlayerState === window.YT.PlayerState.PLAYING;
-		
-		// Update timeline variables (only if not currently dragging)
-		if (!isDragging) {
-			currentTime = currentVideoTime;
-			duration = videoDuration || 0;
-		}
+		try {
+			if (!isPlayerReady || !player) return;
+			
+			const currentVideoTime = player.getCurrentTime();
+			const videoDuration = player.getDuration();
+			const youtubePlayerState = player.getPlayerState();
+			const isPlaying = youtubePlayerState === window.YT.PlayerState.PLAYING;
+			
+			// Update timeline variables (only if not currently dragging)
+			if (!isDragging) {
+				currentTime = currentVideoTime;
+				duration = videoDuration || 0;
+			}
 
-		// Send command to update player position
-		djammsStore.sendCommand('update_player_position', { position: currentVideoTime });
+			// Send command to update player position
+			djammsStore.sendCommand('update_player_position', { position: currentVideoTime });
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error updating player progress:', error);
+		}
 	}
 
 	// Handle track change requests from queue manager
@@ -282,57 +367,81 @@
 
 	// Handle automatic track loading from jukebox state changes
 	function loadNewVideo(videoId: string, title: string) {
-		console.log('🎵 VideoPlayer: Loading new video from jukebox:', title);
-		
-		// Update current video
-		currentVideo = videoId;
-		
-		// Initialize player if not already done, otherwise load the new video
-		if (!player && browser && window.YT && playerContainer) {
-			console.log('🎵 VideoPlayer: Initializing player with new track');
-			initializePlayer();
-		} else if (isPlayerReady && player) {
-			console.log('🎵 VideoPlayer: Loading new track in existing player');
-			player.loadVideoById(videoId);
+		try {
+			console.log('🎵 VideoPlayer: Loading new video from jukebox:', title);
+			
+			// Update current video
+			currentVideo = videoId;
+			
+			// Initialize player if not already done, otherwise load the new video
+			if (!player && browser && window.YT && playerContainer) {
+				console.log('🎵 VideoPlayer: Initializing player with new track');
+				initializePlayer();
+			} else if (isPlayerReady && player) {
+				console.log('🎵 VideoPlayer: Loading new track in existing player');
+				player.loadVideoById(videoId);
+			}
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error loading new video:', error);
 		}
 	}
 
 	// Control functions
 	function togglePlayPause() {
-		if (!isPlayerReady) return;
-		
-		const state = player.getPlayerState();
-		if (state === window.YT.PlayerState.PLAYING) {
-			player.pauseVideo();
-		} else {
-			player.playVideo();
+		try {
+			if (!isPlayerReady) return;
+			
+			const state = player.getPlayerState();
+			if (state === window.YT.PlayerState.PLAYING) {
+				player.pauseVideo();
+			} else {
+				player.playVideo();
+			}
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error toggling play/pause:', error);
 		}
 	}
 
 	function skipForward() {
-		if (!isPlayerReady) return;
-		const currentTime = player.getCurrentTime();
-		player.seekTo(currentTime + 10);
+		try {
+			if (!isPlayerReady) return;
+			const currentTime = player.getCurrentTime();
+			player.seekTo(currentTime + 10);
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error skipping forward:', error);
+		}
 	}
 
 	function skipBackward() {
-		if (!isPlayerReady) return;
-		const currentTime = player.getCurrentTime();
-		player.seekTo(Math.max(0, currentTime - 10));
+		try {
+			if (!isPlayerReady) return;
+			const currentTime = player.getCurrentTime();
+			player.seekTo(Math.max(0, currentTime - 10));
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error skipping backward:', error);
+		}
 	}
 
 	function adjustVolume(delta: number) {
-		if (!isPlayerReady) return;
-		const currentVolume = player.getVolume();
-		const newVolume = Math.max(0, Math.min(100, currentVolume + delta));
-		player.setVolume(newVolume);
+		try {
+			if (!isPlayerReady) return;
+			const currentVolume = player.getVolume();
+			const newVolume = Math.max(0, Math.min(100, currentVolume + delta));
+			player.setVolume(newVolume);
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error adjusting volume:', error);
+		}
 	}
 
 	// Timeline control functions
 	function seekTo(time: number) {
-		if (!isPlayerReady) return;
-		player.seekTo(time);
-		currentTime = time;
+		try {
+			if (!isPlayerReady) return;
+			player.seekTo(time);
+			currentTime = time;
+		} catch (error) {
+			console.error('🎵 VideoPlayer: Error seeking to time:', error);
+		}
 	}
 
 	function handleTimelineClick(event: MouseEvent) {
@@ -444,8 +553,12 @@
 				break;
 			case 'KeyF':
 				event.preventDefault();
-				if (player && player.getIframe) {
-					player.getIframe().requestFullscreen();
+				try {
+					if (player && player.getIframe) {
+						player.getIframe().requestFullscreen();
+					}
+				} catch (error) {
+					console.error('🎵 VideoPlayer: Error requesting fullscreen:', error);
 				}
 				break;
 			case 'Home':
@@ -470,7 +583,16 @@
 
 <main class="youtube-player">
 	<!-- Authentication Check -->
-	{#if !$djammsStore.isAuthenticated}
+	{#if $djammsStore.isLoading}
+		<!-- Loading authentication state -->
+		<div class="absolute inset-0 bg-gradient-to-br from-youtube-dark via-youtube-darker to-music-purple flex items-center justify-center">
+			<div class="text-center p-8 max-w-2xl">
+				<div class="w-16 h-16 border-4 border-youtube-red border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+				<h2 class="text-white text-xl font-semibold mb-2">Checking Authentication...</h2>
+				<p class="text-gray-400">Verifying your login status</p>
+			</div>
+		</div>
+	{:else if !$djammsStore.isAuthenticated}
 		<div class="absolute inset-0 bg-gradient-to-br from-youtube-dark via-youtube-darker to-music-purple flex items-center justify-center">
 			<div class="text-center p-8 max-w-2xl">
 				<Users class="w-20 h-20 text-red-400 mx-auto mb-6" />
@@ -480,7 +602,7 @@
 
 				<div class="flex gap-4 justify-center">
 					<button
-						on:click={() => window.location.href = '/dashboard'}
+						on:click={() => window.location.href = '/djamms-dashboard'}
 						class="px-6 py-3 bg-youtube-red hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
 					>
 						Return to Dashboard
@@ -499,6 +621,25 @@
 					<div class="w-16 h-16 border-4 border-youtube-red border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
 					<h2 class="text-white text-xl font-semibold mb-2">Loading Player...</h2>
 					<p class="text-gray-400">Initializing YouTube video player</p>
+				</div>
+			</div>
+		{:else if !currentVideo}
+			<!-- No songs in queue state -->
+			<div class="absolute inset-0 bg-gradient-to-br from-youtube-dark via-youtube-darker to-music-purple flex items-center justify-center">
+				<div class="text-center p-8 max-w-2xl">
+					<Music class="w-20 h-20 text-youtube-red mx-auto mb-6" />
+					<h2 class="text-white text-3xl font-bold mb-4">No Songs in Queue</h2>
+					<p class="text-gray-300 text-xl mb-6">The playlist is empty. Add some songs to get started!</p>
+					<p class="text-gray-400 mb-8">Use the queue manager to add tracks to your playlist.</p>
+
+					<div class="flex gap-4 justify-center">
+						<button
+							on:click={() => window.open('/adminconsole#queue', '_blank')}
+							class="px-6 py-3 bg-youtube-red hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+						>
+							Open Queue Manager
+						</button>
+					</div>
 				</div>
 			</div>
 		{/if}

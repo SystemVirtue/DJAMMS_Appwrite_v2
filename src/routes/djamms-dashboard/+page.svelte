@@ -3,17 +3,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { djammsStore } from '$lib/stores/djamms';
-	import { 
-		initializeJukebox,
-		jukeboxState,
-		currentTrack, 
-		playerControls,
-		queueInfo,
-		connectionStatus,
-		jukeboxActions,
-		destroyJukebox
-	} from '$lib/stores/jukebox';
+	import { djammsStore, currentTrack, playerControls, queueInfo, venueStatus } from '$lib/stores/djamms';
 	import { windowManager } from '$lib/services/windowManager';
 	import { account } from '$lib/utils/appwrite';
 	import { InstanceIds } from '$lib/utils/idGenerator';
@@ -52,7 +42,6 @@
 
 	// Instance and connection management
 	let instanceId = InstanceIds.dashboard();
-	let isJukeboxInitialized = false;
 	let playerInstanceStatus = 'checking'; // 'local', 'external', 'none'
 	let isVideoPlayerOpen = false;
 
@@ -71,11 +60,11 @@
 
 	// System status reactive variables
 	$: playerStatus = {
-		status: $currentTrack.status || 'idle',
-		isConnected: $connectionStatus === 'connected',
-		currentTrack: $currentTrack.title || 'None',
-		position: $currentTrack.position || 0,
-		duration: $currentTrack.duration || 0
+		status: $djammsStore.playerState.status,
+		isConnected: $venueStatus.isConnected,
+		currentTrack: $currentTrack?.title || 'None',
+		position: $djammsStore.playerState.position,
+		duration: $currentTrack?.duration || 0
 	};
 
 	$: serverStatus = {
@@ -87,7 +76,7 @@
 
 	$: instanceStatus = {
 		id: instanceId.slice(-8),
-		initialized: isJukeboxInitialized,
+		initialized: true,
 		activeWindows: getActiveWindowsCount(),
 		uptime: getUptime()
 	};
@@ -120,21 +109,21 @@
 	}
 
 	// Initialize dashboard
-	onMount(async () => {
+	onMount(() => {
 		if (browser && $djammsStore.isAuthenticated) {
-			try {
-				console.log('🎵 DJAMMS Dashboard: Initializing jukebox connection...');
-				await initializeJukebox(instanceId);
-				isJukeboxInitialized = true;
-				addLog('info', 'system', 'DJAMMS Dashboard initialized successfully');
-				console.log('🎵 DJAMMS Dashboard: Connected to jukebox system');
-				
-				// Check for existing video player instances
-				checkVideoPlayerStatus();
-			} catch (error) {
-				console.error('🎵 DJAMMS Dashboard: Failed to initialize jukebox:', error);
-				addLog('error', 'system', `Failed to initialize jukebox: ${error}`);
-			}
+			(async () => {
+				try {
+					console.log('🎵 DJAMMS Dashboard: Initializing dashboard...');
+					addLog('info', 'system', 'DJAMMS Dashboard initialized successfully');
+					console.log('🎵 DJAMMS Dashboard: Dashboard ready');
+
+					// Check for existing video player instances
+					checkVideoPlayerStatus();
+				} catch (error) {
+					console.error('🎵 DJAMMS Dashboard: Failed to initialize dashboard:', error);
+					addLog('error', 'system', `Failed to initialize dashboard: ${error}`);
+				}
+			})();
 		}
 
 		// Set up periodic updates
@@ -148,11 +137,8 @@
 
 	// Cleanup on destroy
 	onDestroy(() => {
-		if (isJukeboxInitialized) {
-			console.log('🎵 DJAMMS Dashboard: Disconnecting from jukebox...');
-			addLog('info', 'system', 'DJAMMS Dashboard disconnecting');
-			destroyJukebox();
-		}
+		console.log('🎵 DJAMMS Dashboard: Disconnecting...');
+		addLog('info', 'system', 'DJAMMS Dashboard disconnecting');
 	});
 
 	// Activity log management
@@ -238,7 +224,7 @@
 	async function openAdminConsole() {
 		try {
 			addLog('info', 'admin-console', 'Opening admin console...');
-			const opened = await windowManager.openEndpoint('/dashboard');
+			const opened = await windowManager.openEndpoint('/adminconsole');
 			if (opened) {
 				addLog('info', 'admin-console', 'Admin console opened successfully');
 			} else {
@@ -271,7 +257,7 @@
 		try {
 			addLog('info', 'system', 'User logging out...');
 			await account.deleteSession('current');
-			auth.logout();
+			djammsStore.setUser(null);
 			goto('/');
 		} catch (error) {
 			console.error('Logout failed:', error);

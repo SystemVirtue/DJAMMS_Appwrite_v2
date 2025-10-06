@@ -13,6 +13,7 @@
 
 import { Client, Databases, Users, Query, ID } from 'node-appwrite';
 import dotenv from 'dotenv';
+import wrapDatabases from './wrapDatabases.mjs';
 
 // Load environment variables
 dotenv.config();
@@ -22,7 +23,7 @@ const client = new Client()
   .setProject(process.env.APPWRITE_PROJECT_ID || '')
   .setKey(process.env.APPWRITE_API_KEY || ''); // Server API key required
 
-const databases = new Databases(client);
+const databases = wrapDatabases(new Databases(client));
 const users = new Users(client);
 const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || '';
 
@@ -176,7 +177,8 @@ class UserSynchronization {
             'dev@djamms.com',
             'dev@djamms.app',
             'developer@djamms.com',
-            'demo@djamms.app'
+            'demo@djamms.app',
+            'djammsdemo@gmail.com'
         ];
         
         const adminDomains = [

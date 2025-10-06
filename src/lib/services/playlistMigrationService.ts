@@ -2,10 +2,10 @@ import { PlaylistService } from './playlistService.js';
 import { EnhancedPlaylistService } from './enhancedPlaylistService.js';
 import type { 
 	Playlist, 
-	PlaylistTrack, 
+	Track as PlaylistTrack, 
 	ParsedEnhancedPlaylist,
 	EnhancedPlaylistCreate 
-} from '$lib/types';
+} from '$lib/types.ts';
 
 /**
  * Migration service to transition from legacy playlists to enhanced playlists
@@ -337,6 +337,8 @@ export class PlaylistMigrationService {
 function convertLegacyToEnhanced(legacyPlaylist: Playlist, userId: string): ParsedEnhancedPlaylist {
 	return {
 		$id: legacyPlaylist.$id || '',
+		$collectionId: legacyPlaylist.$collectionId || '',
+		$databaseId: legacyPlaylist.$databaseId || '',
 		$permissions: [], // Default empty permissions for enhanced playlist
 		user_id: userId,
 		name: legacyPlaylist.name || 'Untitled Playlist',

@@ -7,6 +7,18 @@
 	"/adminconsole": [
 		"src/routes/+layout.ts"
 	],
+	"/api/admin/user-sync": [
+		"src/routes/api/admin/user-sync/+server.ts"
+	],
+	"/api/playlists": [
+		"src/routes/api/playlists/+server.ts"
+	],
+	"/api/ui-command": [
+		"src/routes/api/ui-command/+server.ts"
+	],
+	"/api/venues": [
+		"src/routes/api/venues/+server.ts"
+	],
 	"/auth/error": [
 		"src/routes/+layout.ts"
 	],

@@ -1,5 +1,5 @@
 import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
-import type { Playlist, PlaylistTrack } from '$lib/types';
+import type { Playlist, Track as PlaylistTrack } from '$lib/types.ts';
 import { Query } from 'appwrite';
 
 /**
@@ -16,10 +16,19 @@ export class PlaylistService {
 	}
 
 	/**
-	 * Parse tracks from Appwrite response - handles both JSON string and array formats
+	 * Parse tracks from various response formats
 	 */
 	private parseTracksFromResponse(response: any): PlaylistTrack[] {
 		try {
+			console.log('parseTracksFromResponse - response.tracks type:', typeof response.tracks);
+			console.log('parseTracksFromResponse - response.tracks value:', response.tracks);
+
+			// Handle direct object with tracks array (like global default playlist)
+			if (response.tracks && typeof response.tracks === 'object' && response.tracks.tracks && Array.isArray(response.tracks.tracks)) {
+				console.log(`Parsed ${response.tracks.tracks.length} tracks from direct nested object`);
+				return response.tracks.tracks;
+			}
+
 			// First try the tracks field (JSON string)
 			if (response.tracks && typeof response.tracks === 'string') {
 				console.log('Parsing tracks from JSON string...');
@@ -28,9 +37,12 @@ export class PlaylistService {
 					console.log(`Parsed ${parsed.length} tracks from tracks field`);
 					return parsed;
 				}
-			}
-			
-			// Then try tracks_array field (array of JSON strings)
+				// Handle nested object structure (like global default playlist)
+				if (parsed && typeof parsed === 'object' && parsed.tracks && Array.isArray(parsed.tracks)) {
+					console.log(`Parsed ${parsed.tracks.length} tracks from nested tracks object`);
+					return parsed.tracks;
+				}
+			}			// Then try tracks_array field (array of JSON strings)
 			if (response.tracks_array && Array.isArray(response.tracks_array)) {
 				console.log('Parsing tracks from JSON string array...');
 				const parsed = response.tracks_array.map((trackStr: string) => {
@@ -80,14 +92,40 @@ export class PlaylistService {
 			
 			return {
 				$id: directResponse.$id,
-				user_id: directResponse.user_id,
+				$collectionId: directResponse.$collectionId,
+				$databaseId: directResponse.$databaseId,
+				$createdAt: directResponse.$createdAt,
+				$updatedAt: directResponse.$updatedAt,
+				$permissions: directResponse.$permissions || [],
+				playlist_id: directResponse.playlist_id || directResponse.$id,
 				name: directResponse.name,
 				description: directResponse.description,
+				owner_id: directResponse.owner_id || directResponse.user_id,
+				venue_id: directResponse.venue_id,
 				is_public: directResponse.is_public,
+				is_default: directResponse.is_default,
+				is_starred: directResponse.is_starred,
+				category: directResponse.category,
+				cover_image_url: directResponse.cover_image_url || directResponse.thumbnail,
 				tracks: this.parseTracksFromResponse(directResponse) || [],
-				thumbnail: directResponse.thumbnail,
-				$createdAt: directResponse.$createdAt,
-				$updatedAt: directResponse.$updatedAt
+				track_count: directResponse.track_count || (this.parseTracksFromResponse(directResponse)?.length || 0),
+				total_duration: directResponse.total_duration,
+				tags: directResponse.tags,
+				play_count: directResponse.play_count,
+				last_played_at: directResponse.last_played_at,
+				created_at: directResponse.created_at || directResponse.$createdAt,
+				updated_at: directResponse.updated_at || directResponse.$updatedAt,
+				// Backward compatibility
+				user_id: directResponse.user_id,
+				isPublic: directResponse.is_public,
+				isDefault: directResponse.is_default,
+				isStarred: directResponse.is_starred,
+				coverImage: directResponse.cover_image_url || directResponse.thumbnail,
+				trackCount: directResponse.track_count,
+				totalDuration: directResponse.total_duration,
+				updated: directResponse.updated_at || directResponse.$updatedAt,
+				created: directResponse.created_at || directResponse.$createdAt,
+				id: directResponse.$id
 			} as Playlist;
 		} catch (error) {
 			console.error('Failed to fetch global default playlist:', error);
@@ -120,14 +158,40 @@ export class PlaylistService {
 
 			const playlists: Playlist[] = response.documents.map((doc: any) => ({
 				$id: doc.$id,
-				user_id: doc.user_id,
+				$collectionId: doc.$collectionId,
+				$databaseId: doc.$databaseId,
+				$createdAt: doc.$createdAt,
+				$updatedAt: doc.$updatedAt,
+				$permissions: doc.$permissions || [],
+				playlist_id: doc.playlist_id || doc.$id,
 				name: doc.name,
 				description: doc.description,
+				owner_id: doc.owner_id || doc.user_id,
+				venue_id: doc.venue_id,
 				is_public: doc.is_public,
-				tracks: this.parseTracksFromResponse(doc),
-				thumbnail: doc.thumbnail,
-				$createdAt: doc.$createdAt,
-				$updatedAt: doc.$updatedAt
+				is_default: doc.is_default,
+				is_starred: doc.is_starred,
+				category: doc.category,
+				cover_image_url: doc.cover_image_url || doc.thumbnail,
+				tracks: this.parseTracksFromResponse(doc) || [],
+				track_count: doc.track_count || (this.parseTracksFromResponse(doc)?.length || 0),
+				total_duration: doc.total_duration,
+				tags: doc.tags,
+				play_count: doc.play_count,
+				last_played_at: doc.last_played_at,
+				created_at: doc.created_at || doc.$createdAt,
+				updated_at: doc.updated_at || doc.$updatedAt,
+				// Backward compatibility
+				user_id: doc.user_id,
+				isPublic: doc.is_public,
+				isDefault: doc.is_default,
+				isStarred: doc.is_starred,
+				coverImage: doc.cover_image_url || doc.thumbnail,
+				trackCount: doc.track_count,
+				totalDuration: doc.total_duration,
+				updated: doc.updated_at || doc.$updatedAt,
+				created: doc.created_at || doc.$createdAt,
+				id: doc.$id
 			}));
 
 			console.log(`Successfully loaded ${playlists.length} playlists from Appwrite`);
@@ -171,14 +235,40 @@ export class PlaylistService {
 			
 			return {
 				$id: response.$id,
-				user_id: response.user_id,
+				$collectionId: response.$collectionId,
+				$databaseId: response.$databaseId,
+				$createdAt: response.$createdAt,
+				$updatedAt: response.$updatedAt,
+				$permissions: response.$permissions || [],
+				playlist_id: response.playlist_id || response.$id,
 				name: response.name,
 				description: response.description,
+				owner_id: response.owner_id || response.user_id,
+				venue_id: response.venue_id,
 				is_public: response.is_public,
+				is_default: response.is_default,
+				is_starred: response.is_starred,
+				category: response.category,
+				cover_image_url: response.cover_image_url || response.thumbnail,
 				tracks: response.tracks || [],
-				thumbnail: response.thumbnail,
-				$createdAt: response.$createdAt,
-				$updatedAt: response.$updatedAt
+				track_count: response.track_count || (response.tracks?.length || 0),
+				total_duration: response.total_duration,
+				tags: response.tags,
+				play_count: response.play_count,
+				last_played_at: response.last_played_at,
+				created_at: response.created_at || response.$createdAt,
+				updated_at: response.updated_at || response.$updatedAt,
+				// Backward compatibility
+				user_id: response.user_id,
+				isPublic: response.is_public,
+				isDefault: response.is_default,
+				isStarred: response.is_starred,
+				coverImage: response.cover_image_url || response.thumbnail,
+				trackCount: response.track_count,
+				totalDuration: response.total_duration,
+				updated: response.updated_at || response.$updatedAt,
+				created: response.created_at || response.$createdAt,
+				id: response.$id
 			} as Playlist;
 		} catch (error) {
 			console.error('Failed to create playlist:', error);
@@ -213,14 +303,40 @@ export class PlaylistService {
 			
 			return {
 				$id: response.$id,
-				user_id: response.user_id,
+				$collectionId: response.$collectionId,
+				$databaseId: response.$databaseId,
+				$createdAt: response.$createdAt,
+				$updatedAt: response.$updatedAt,
+				$permissions: response.$permissions || [],
+				playlist_id: response.playlist_id || response.$id,
 				name: response.name,
 				description: response.description,
+				owner_id: response.owner_id || response.user_id,
+				venue_id: response.venue_id,
 				is_public: response.is_public,
+				is_default: response.is_default,
+				is_starred: response.is_starred,
+				category: response.category,
+				cover_image_url: response.cover_image_url || response.thumbnail,
 				tracks: response.tracks || [],
-				thumbnail: response.thumbnail,
-				$createdAt: response.$createdAt,
-				$updatedAt: response.$updatedAt
+				track_count: response.track_count || (response.tracks?.length || 0),
+				total_duration: response.total_duration,
+				tags: response.tags,
+				play_count: response.play_count,
+				last_played_at: response.last_played_at,
+				created_at: response.created_at || response.$createdAt,
+				updated_at: response.updated_at || response.$updatedAt,
+				// Backward compatibility
+				user_id: response.user_id,
+				isPublic: response.is_public,
+				isDefault: response.is_default,
+				isStarred: response.is_starred,
+				coverImage: response.cover_image_url || response.thumbnail,
+				trackCount: response.track_count,
+				totalDuration: response.total_duration,
+				updated: response.updated_at || response.$updatedAt,
+				created: response.created_at || response.$createdAt,
+				id: response.$id
 			} as Playlist;
 		} catch (error) {
 			console.error('Failed to update playlist:', error);

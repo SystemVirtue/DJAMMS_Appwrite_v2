@@ -126,7 +126,8 @@ export class PlayerInstanceManager {
     
     const devEmails = [
       'demo@djamms.app',
-      'dev@djamms.com'
+      'dev@djamms.com',
+      'djammsdemo@gmail.com'
     ];
 
     return adminEmails.includes(email.toLowerCase()) || devEmails.includes(email.toLowerCase());

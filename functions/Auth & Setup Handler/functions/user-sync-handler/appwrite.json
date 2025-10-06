@@ -1,0 +1,20 @@
+{
+  "$id": "user-sync-handler",
+  "name": "User Sync Handler",
+  "runtime": "node-18.0",
+  "path": "functions/user-sync-handler",
+  "entrypoint": "src/main.js",
+  "ignore": [
+    "node_modules",
+    ".git",
+    "README.md"
+  ],
+  "execute": [
+    "users.read",
+    "databases.read",
+    "databases.write"
+  ],
+  "events": [],
+  "schedule": "",
+  "timeout": 300
+}

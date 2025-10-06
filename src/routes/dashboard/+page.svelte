@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { djammsStore, venueStatus, currentTrack, playerControls, queueInfo } from '$lib/stores/djamms';
+	import { djammsStore, venueStatus, currentTrack, playerControls, queueInfo, playerStatus } from '$lib/stores/djamms';
 	import { playerSync } from '$lib/services/playerSync';
 	import { windowManager } from '$lib/services/windowManager';
 	import { getDJAMMSService } from '$lib/services/serviceInit';
@@ -45,7 +45,7 @@
 	async function logout() {
 		try {
 			await account.deleteSession('current');
-			djammsStore.reset();
+			djammsStore.setUser(null);
 			goto('/');
 		} catch (error) {
 			console.error('Logout failed:', error);
@@ -194,7 +194,11 @@
 			icon: Play,
 			path: '/videoplayer',
 			gradient: 'from-youtube-red to-red-700',
-			action: () => openWindow('/videoplayer')
+			action: async () => {
+				if (browser) {
+					await windowManager.openEndpoint('/videoplayer');
+				}
+			}
 		},
 		{
 			id: 'queuemanager',
@@ -245,11 +249,13 @@
 
 		<div class="flex items-center gap-4">
 			<!-- Player Status -->
-			{@const statusDisplay = getStatusDisplay()}
-			<div class="status-indicator {statusDisplay.class}">
-				<svelte:component this={statusDisplay.icon} class="w-4 h-4" />
-				<span class="hidden sm:inline">{statusDisplay.text}</span>
-			</div>
+			{#if true}
+				{@const statusDisplay = getStatusDisplay()}
+				<div class="status-indicator {statusDisplay.class}">
+					<svelte:component this={statusDisplay.icon} class="w-4 h-4" />
+					<span class="hidden sm:inline">{statusDisplay.text}</span>
+				</div>
+			{/if}
 
 			<!-- User Menu -->
 			<div class="flex items-center gap-2">

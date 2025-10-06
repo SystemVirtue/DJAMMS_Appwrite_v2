@@ -1,7 +1,7 @@
 <!-- Admin Console Tab Component - Embedded version of /adminconsole -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { djammsStore } from '$lib/stores/djamms';
+	import { djammsStore, playerStatus } from '$lib/stores/djamms';
 	import { 
 		Settings,
 		User,
@@ -127,6 +127,8 @@
 				return { icon: Wifi, text: 'CONNECTED (REMOTE), PAUSED', class: 'status-connected-paused' };
 			case 'server-error':
 				return { icon: AlertTriangle, text: 'SERVER ERROR', class: 'status-error' };
+			case 'no-connected-player':
+				return { icon: WifiOff, text: 'NO CONNECTED PLAYER', class: 'status-disconnected' };
 			default:
 				return { icon: WifiOff, text: 'NO CONNECTED PLAYER', class: 'status-disconnected' };
 		}
@@ -351,7 +353,7 @@
 			</div>
 
 			<!-- Player Status -->
-			{#if $playerStatus}
+			{#if $playerStatus.isConnected}
 				{@const statusDisplay = getStatusDisplay($playerStatus)}
 				<div class="status-indicator {statusDisplay.class}">
 					<svelte:component this={statusDisplay.icon} class="w-4 h-4" />

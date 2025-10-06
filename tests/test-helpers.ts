@@ -1,5 +1,5 @@
 import { type Page, type BrowserContext, expect } from '@playwright/test';
-import { Client, Account } from 'appwrite';
+import { Client, Account, Databases, Functions } from 'appwrite';
 
 export class TestHelper {
   static async authenticateWithGoogle(page: Page): Promise<void> {
@@ -128,5 +128,170 @@ export class TestHelper {
       // Clear sessionStorage
       sessionStorage.clear();
     });
+  }
+
+  // Database verification utilities
+  static async getAppwriteClient(): Promise<{ client: Client; databases: Databases; functions: Functions }> {
+    const client = new Client()
+      .setEndpoint(process.env.VITE_APPWRITE_ENDPOINT || 'https://syd.cloud.appwrite.io/v1')
+      .setProject(process.env.VITE_APPWRITE_PROJECT_ID || '68cc86c3002b27e13947');
+
+    // For server-side operations, we need to authenticate with API key
+    // This would require setting up a server session or using a service account
+    // For now, we'll use the client without authentication for read operations
+    
+    const databases = new Databases(client);
+    const functions = new Functions(client);
+
+    return { client, databases, functions };
+  }
+
+  static async checkUserExists(email: string): Promise<any | null> {
+    try {
+      const { databases } = await this.getAppwriteClient();
+      const databaseId = process.env.VITE_APPWRITE_DATABASE_ID || '68cc92d30024e1b6eeb6';
+      
+      // Query users collection for the email
+      const response = await databases.listDocuments(databaseId, 'users', [
+        `email=${email}`
+      ]);
+      
+      return response.documents.length > 0 ? response.documents[0] : null;
+    } catch (error) {
+      console.error('Error checking user existence:', error);
+      return null;
+    }
+  }
+
+  static async checkVenueExists(venueId: string): Promise<any | null> {
+    try {
+      const { databases } = await this.getAppwriteClient();
+      const databaseId = process.env.VITE_APPWRITE_DATABASE_ID || '68cc92d30024e1b6eeb6';
+      
+      // Query venues collection for the venue_id
+      const response = await databases.listDocuments(databaseId, 'venues', [
+        `$id=${venueId}`
+      ]);
+      
+      return response.documents.length > 0 ? response.documents[0] : null;
+    } catch (error) {
+      console.error('Error checking venue existence:', error);
+      return null;
+    }
+  }
+
+  static async updateUserVenueId(userId: string, venueId: string): Promise<void> {
+    try {
+      const { databases } = await this.getAppwriteClient();
+      const databaseId = process.env.VITE_APPWRITE_DATABASE_ID || '68cc92d30024e1b6eeb6';
+      
+      await databases.updateDocument(databaseId, 'users', userId, {
+        venue_id: venueId
+      });
+      
+      console.log(`✅ Updated user ${userId} with venue_id: ${venueId}`);
+    } catch (error) {
+      console.error('Error updating user venue_id:', error);
+      throw error;
+    }
+  }
+
+  static async getFunctionExecutions(functionId: string, limit: number = 10): Promise<any[]> {
+    try {
+      const { functions } = await this.getAppwriteClient();
+      
+      // listExecutions expects queries array, not limit
+      const response = await functions.listExecutions(functionId, []);
+      return response.executions.slice(0, limit);
+    } catch (error) {
+      console.error('Error getting function executions:', error);
+      return [];
+    }
+  }
+
+  static async waitForFunctionExecution(functionId: string, timeoutMs: number = 30000): Promise<any | null> {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+      const executions = await this.getFunctionExecutions(functionId, 1);
+      
+      if (executions.length > 0) {
+        const latestExecution = executions[0];
+        if (latestExecution.status === 'completed') {
+          return latestExecution;
+        }
+      }
+      
+      // Wait 2 seconds before checking again
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    return null;
+  }
+
+  static async loginWithCredentials(page: Page, email: string, password: string): Promise<void> {
+    // Navigate to homepage
+    await page.goto('/');
+    await this.waitForPageLoad(page);
+    
+    // Wait for and click sign in button
+    const signInButton = page.locator('button').filter({
+      hasText: /sign in with google|google|login/i
+    }).first();
+    
+    await expect(signInButton).toBeVisible({ timeout: 10000 });
+    await signInButton.click();
+    
+    // Handle Google OAuth - this would need to be mocked or use test credentials
+    // For now, we'll assume the OAuth flow completes
+    await page.waitForURL(/\/djamms-dashboard/, { timeout: 30000 });
+  }
+
+  static async logout(page: Page): Promise<void> {
+    // Look for logout button
+    const logoutButton = page.locator('button').filter({
+      hasText: /logout|sign out/i
+    }).first();
+    
+    if (await logoutButton.isVisible({ timeout: 5000 })) {
+      await logoutButton.click();
+      await page.waitForURL('/', { timeout: 10000 });
+    } else {
+      // Fallback: clear session and reload
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.reload();
+      await page.waitForURL('/', { timeout: 10000 });
+    }
+  }
+
+  static async callAuthSetupHandler(userId: string): Promise<void> {
+    try {
+      const { functions } = await this.getAppwriteClient();
+      
+      const execution = await functions.createExecution('auth-setup-handler', JSON.stringify({ userId }));
+      console.log('✅ Auth setup handler called successfully:', execution.$id);
+      
+      // Wait for execution to complete
+      let attempts = 0;
+      while (attempts < 10) {
+        const status = await functions.getExecution('auth-setup-handler', execution.$id);
+        if (status.status === 'completed') {
+          console.log('✅ Auth setup handler execution completed');
+          return;
+        } else if (status.status === 'failed') {
+          throw new Error('Auth setup handler failed');
+        }
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      throw new Error('Auth setup handler execution timed out');
+    } catch (error) {
+      console.error('Error calling auth setup handler:', error);
+      throw error;
+    }
   }
 }

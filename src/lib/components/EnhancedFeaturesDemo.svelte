@@ -6,7 +6,8 @@
 		ParsedEnhancedPlaylist, 
 		UserInstanceSettings, 
 		ParsedUserQueue,
-		PlaylistTrack 
+		PlaylistTrack,
+		Track
 	} from '$lib/types';
 	
 	// Import services (these will work once compile errors are resolved)
@@ -129,7 +130,7 @@
 		}
 	}
 
-	async function recordTrackPlay(track: PlaylistTrack, playedDuration: number) {
+	async function recordTrackPlay(track: Track, playedDuration: number) {
 		if (!userId) return;
 		
 		try {

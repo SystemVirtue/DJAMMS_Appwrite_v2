@@ -1,0 +1,27 @@
+{
+  "name": "djamms-user-login-handler",
+  "version": "1.0.0",
+  "description": "DJAMMS User Login Handler - Automatic user sync and player instance creation",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "appwrite functions createDeployment --functionId user-login-handler --code . --activate true"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": [
+    "appwrite",
+    "djamms", 
+    "user-management",
+    "player-instances",
+    "serverless"
+  ],
+  "author": "DJAMMS Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

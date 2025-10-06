@@ -1,5 +1,4 @@
-import { jukeboxState, jukeboxActions } from '../stores/jukebox';
-import { playerStatus } from '../stores/player';
+import { djammsStore } from '../stores/djamms';
 import { InstanceIds } from '../utils/idGenerator';
 import { browser } from '$app/environment';
 
@@ -55,10 +54,12 @@ class PlayerSyncService {
 		switch (type) {
 			case 'player-state-change':
 				// Update local player status without broadcasting back
-				playerStatus.setStatus({
-					status: status,
-					last_updated: timestamp
-				});
+				console.log('🎵 PlayerSync: Received player state change:', status, 'from instance:', instanceId);
+				// TODO: Update venue state through djammsStore
+				// playerStatus.setStatus({
+				// 	status: status,
+				// 	last_updated: timestamp
+				// });
 				break;
 
 			case 'track-change-request':
@@ -78,19 +79,23 @@ class PlayerSyncService {
 				
 			case 'status-response':
 				// Another window is responding with current status
-				playerStatus.setStatus({
-					status: status,
-					last_updated: timestamp
-				});
+				// TODO: Update venue state through djammsStore
+				console.log('PlayerSync: Received status response:', status);
+				// playerStatus.setStatus({
+				// 	status: status,
+				// 	last_updated: timestamp
+				// });
 				break;
 				
 			case 'player-disconnection':
 				// A player window has disconnected
 				if (status === 'no-connected-player') {
-					playerStatus.setStatus({
-						status: 'no-connected-player',
-						last_updated: timestamp
-					});
+					// TODO: Update venue state through djammsStore
+					console.log('PlayerSync: Player disconnected');
+					// playerStatus.setStatus({
+					// 	status: 'no-connected-player',
+					// 	last_updated: timestamp
+					// });
 				}
 				break;
 		}
@@ -137,10 +142,11 @@ class PlayerSyncService {
 		
 		// Get current status from store
 		let currentStatus = 'no-connected-player';
-		const unsubscribe = playerStatus.subscribe(status => {
-			currentStatus = status.status;
-		});
-		unsubscribe();
+		// TODO: Get status from djammsStore
+		// const unsubscribe = playerStatus.subscribe(status => {
+		// 	currentStatus = status.status;
+		// });
+		// unsubscribe();
 		
 		const message = {
 			type: 'status-response',

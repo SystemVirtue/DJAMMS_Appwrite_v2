@@ -332,10 +332,9 @@ export class WindowManager {
 		} else {
 			console.log(`Opening new window for ${endpoint}`);
 			
-			// Pre-set the flag to prevent race conditions
-			this.setEndpointFlag(endpoint);
-			
-			const newWindow = window.open(endpoint, '_blank', this.getWindowFeatures(endpoint));
+			// Create absolute URL for the endpoint
+			const absoluteUrl = window.location.origin + endpoint;
+			const newWindow = window.open(absoluteUrl, '_blank', this.getWindowFeatures(endpoint));
 			
 			if (newWindow) {
 				// Register the new window
@@ -348,11 +347,11 @@ export class WindowManager {
 				};
 				
 				this.openWindows.set(endpoint, windowInfo);
+				this.setEndpointFlag(endpoint); // Set flag after successful registration
 				this.broadcastWindowOpened(windowInfo);
 				return true; // Opened new window
 			} else {
-				// Failed to open window, clear flag
-				this.clearEndpointFlag(endpoint);
+				// Failed to open window
 				return false;
 			}
 		}
@@ -367,6 +366,7 @@ export class WindowManager {
 				return `${base},width=1000,height=800,left=200,top=150`;
 			case '/playlistlibrary':
 				return `${base},width=1200,height=900,left=150,top=100`;
+			case '/dashboard':
 			case '/adminconsole':
 				return `${base},width=1100,height=850,left=250,top=200`;
 			default:
@@ -421,7 +421,7 @@ export class WindowManager {
 		const currentPath = window.location.pathname;
 		
 		// Only prevent duplicates for specific endpoints
-		const restrictedPaths = ['/videoplayer', '/queuemanager', '/playlistlibrary', '/adminconsole'];
+		const restrictedPaths = ['/videoplayer', '/queuemanager', '/playlistlibrary', '/dashboard', '/adminconsole'];
 		if (!restrictedPaths.includes(currentPath)) {
 			return false;
 		}

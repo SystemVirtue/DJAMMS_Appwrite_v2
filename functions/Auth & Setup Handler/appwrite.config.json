@@ -1,0 +1,862 @@
+{
+    "projectId": "68cc86c3002b27e13947",
+    "endpoint": "https://syd.cloud.appwrite.io/v1",
+    "projectName": "DJAMMS_v1",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": false,
+                "invites": true,
+                "anonymous": false,
+                "email-otp": false,
+                "magic-url": false,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "functions": [
+        {
+            "$id": "import-playlist",
+            "execute": [],
+            "name": "import-playlist",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [
+                "sessions.write",
+                "users.read",
+                "users.write",
+                "teams.read",
+                "teams.write",
+                "databases.read",
+                "databases.write",
+                "tables.read",
+                "collections.read",
+                "tables.write",
+                "collections.write",
+                "columns.read",
+                "attributes.read",
+                "columns.write",
+                "attributes.write",
+                "indexes.read",
+                "indexes.write",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write",
+                "files.read",
+                "files.write",
+                "buckets.read",
+                "buckets.write",
+                "functions.read",
+                "functions.write",
+                "execution.read",
+                "execution.write",
+                "targets.read",
+                "targets.write",
+                "providers.read",
+                "providers.write",
+                "messages.read",
+                "messages.write",
+                "topics.read",
+                "topics.write",
+                "subscribers.read",
+                "subscribers.write",
+                "locale.read",
+                "avatars.read",
+                "health.read",
+                "migrations.read",
+                "migrations.write",
+                "tokens.read",
+                "tokens.write",
+                "sites.read",
+                "sites.write",
+                "log.read",
+                "log.write"
+            ],
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "entrypoint": "",
+            "commands": "",
+            "specification": "s-0.5vcpu-512mb",
+            "path": "functions/import-playlist"
+        },
+        {
+            "$id": "68cfcc960004ac6754ec",
+            "execute": [
+                "any"
+            ],
+            "name": "create-instance",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [],
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "entrypoint": "index.js",
+            "commands": "",
+            "specification": "s-1vcpu-512mb",
+            "path": "functions/create-instance"
+        },
+        {
+            "$id": "user-login-handler",
+            "execute": [
+                "any"
+            ],
+            "name": "DJAMMS User Login Handler",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [
+                "sessions.write",
+                "users.read",
+                "users.write",
+                "teams.read",
+                "teams.write",
+                "databases.read",
+                "databases.write",
+                "tables.read",
+                "collections.read",
+                "tables.write",
+                "collections.write",
+                "columns.read",
+                "attributes.read",
+                "columns.write",
+                "attributes.write",
+                "indexes.read",
+                "indexes.write",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write",
+                "functions.read",
+                "functions.write",
+                "execution.read",
+                "execution.write"
+            ],
+            "events": [
+                "users.*.sessions.*.create"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "entrypoint": "src/main.js",
+            "commands": "",
+            "specification": "s-0.5vcpu-512mb",
+            "path": "functions/DJAMMS User Login Handler"
+        },
+        {
+            "$id": "auth-setup-handler",
+            "execute": [
+                "any"
+            ],
+            "name": "Auth & Setup Handler",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [],
+            "events": [
+                "users.create",
+                "users.sessions.create"
+            ],
+            "schedule": "",
+            "timeout": 30,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "specification": "s-1vcpu-512mb",
+            "path": "functions/Auth & Setup Handler"
+        },
+        {
+            "$id": "user-sync-handler",
+            "execute": [
+                "any"
+            ],
+            "name": "User Sync Handler",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [
+                "users.read",
+                "databases.read",
+                "databases.write"
+            ],
+            "events": [],
+            "schedule": "",
+            "timeout": 300,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "specification": "s-1vcpu-512mb",
+            "path": "functions/user-sync-handler"
+        }
+    ],
+    "tablesDB": [
+        {
+            "$id": "68cc92d30024e1b6eeb6",
+            "name": "djamms_db",
+            "enabled": true
+        }
+    ],
+    "tables": [
+        {
+            "$id": "venues",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "68cc92d30024e1b6eeb6",
+            "name": "Venue Management",
+            "enabled": true,
+            "columns": [
+                {
+                    "key": "venue_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "venue_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "owner_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "active_player_instance_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "now_playing",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "state",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "current_time",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 9223372036854775807,
+                    "default": null
+                },
+                {
+                    "key": "volume",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 100,
+                    "default": null
+                },
+                {
+                    "key": "active_queue",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "priority_queue",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "player_settings",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "is_shuffled",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "last_heartbeat_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "last_updated",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "created_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "schedule_data",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "venue_id_idx",
+                    "type": "unique",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "owner_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "last_updated_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "users",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "68cc92d30024e1b6eeb6",
+            "name": "User Profiles",
+            "enabled": true,
+            "columns": [
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "username",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "venue_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": "user",
+                    "encrypt": false
+                },
+                {
+                    "key": "prefs",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "avatar_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "is_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "is_developer",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "created_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "last_login_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "last_activity_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "user_id_idx",
+                    "type": "unique",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "email_idx",
+                    "type": "unique",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "venue_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "playlists",
+            "$permissions": [],
+            "databaseId": "68cc92d30024e1b6eeb6",
+            "name": "Playlists",
+            "enabled": true,
+            "columns": [
+                {
+                    "key": "playlist_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "owner_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "venue_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "is_public",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "is_default",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "is_starred",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": "user",
+                    "encrypt": false
+                },
+                {
+                    "key": "cover_image_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "tracks",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "track_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 9223372036854775807,
+                    "default": 0
+                },
+                {
+                    "key": "total_duration",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 9223372036854775807,
+                    "default": 0
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "play_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 9223372036854775807,
+                    "default": 0
+                },
+                {
+                    "key": "last_played_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "created_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "updated_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "playlist_id_idx",
+                    "type": "unique",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "owner_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "venue_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "is_public_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "is_default_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "category_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "activity_log",
+            "$permissions": [],
+            "databaseId": "68cc92d30024e1b6eeb6",
+            "name": "Activity Log",
+            "enabled": true,
+            "columns": [
+                {
+                    "key": "log_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "venue_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "event_type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "event_data",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "timestamp",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "ip_address",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 45,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "user_agent",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "session_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "",
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "log_id_idx",
+                    "type": "unique",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "user_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "venue_id_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "event_type_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                },
+                {
+                    "key": "timestamp_idx",
+                    "type": "key",
+                    "status": "available",
+                    "orders": []
+                }
+            ]
+        }
+    ],
+    "teams": [
+        {
+            "$id": "DJAMMS_Venue_Managers",
+            "name": "DJAMMS_Venue_Managers"
+        }
+    ]
+}

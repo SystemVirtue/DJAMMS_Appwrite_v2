@@ -4,7 +4,7 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
-import { auth } from './auth.js';
+import { djammsStore } from './djamms';
 import { playerInstanceManager } from '../services/playerInstanceManager.js';
 import type { SessionInitResult } from '../services/playerInstanceManager.js';
 
@@ -100,9 +100,9 @@ export const sessionActions = {
    * Refresh session state (useful for checking approval status changes)
    */
   async refreshSession() {
-    const currentAuth = get(auth);
-    if (currentAuth.user) {
-      await sessionActions.initializeSession(currentAuth.user);
+    const currentState = get(djammsStore);
+    if (currentState.currentUser) {
+      await sessionActions.initializeSession(currentState.currentUser);
     }
   },
 
@@ -177,9 +177,9 @@ export const hasActiveQueue = derived(
 let unsubscribeAuth: () => void;
 
 if (typeof window !== 'undefined') {
-  unsubscribeAuth = auth.subscribe(async (authState: any) => {
-    if (authState.user) {
-      await sessionActions.initializeSession(authState.user);
+  unsubscribeAuth = djammsStore.subscribe(async (state) => {
+    if (state.currentUser) {
+      await sessionActions.initializeSession(state.currentUser);
     } else {
       sessionActions.clearSession();
     }

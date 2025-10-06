@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# DJAMMS Appwrite Functions Deployment Script
-# This script deploys the user login handler function to Appwrite
+# DJAMMS Consolidated Appwrite Functions Deployment Script
+# This script deploys all 5 core functions for the DJAMMS system
 
 set -e  # Exit on any error
 
-echo "🚀 DJAMMS Appwrite Functions Deployment"
-echo "======================================="
+echo "🚀 DJAMMS Consolidated Functions Deployment"
+echo "=========================================="
 echo ""
 
 # Colors for output
@@ -15,6 +15,21 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Configuration
+PROJECT_ID="68cc86c3002b27e13947"
+DATABASE_ID="68cc92d30024e1b6eeb6"
+API_KEY="standard_451b7a70d97754000ffab451c2a59b4442ce00dcb6d97e97aa7e9d7fcd180c54a3fc8553a4befb34d44797587fb423204dbbccef1fab5d096e9656fb8486c16cbe25f4d76a9e26228ad2ad2be1a286509e0760f299e0476416add867b15902dc0d927e33ea440806ad82899e1ac36cc155c06cf402ef719b7d53d59468035a0"
+
+# Function configurations (using indexed arrays for compatibility)
+FUNCTION_IDS=("auth-setup-handler" "player-venue-state-manager" "playlist-content-manager" "ui-command-sync-hub" "scheduler-maintenance-agent")
+FUNCTION_NAMES=("Auth & Setup Handler" "Player & Venue State Manager" "Playlist & Content Manager" "UI Command & Sync Hub" "Scheduler & Maintenance Agent")
+
+# Function events (only for event-triggered functions)
+AUTH_EVENTS="users.create,users.sessions.create"
+
+# Function schedules (only for scheduled functions)
+SCHEDULER_SCHEDULE="*/5 * * * *"  # Every 5 minutes
 
 # Check if Appwrite CLI is installed
 if ! command -v appwrite &> /dev/null; then
@@ -36,78 +51,123 @@ echo -e "${GREEN}✅ Authenticated with Appwrite${NC}"
 
 # Get current directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FUNCTIONS_DIR="$SCRIPT_DIR"
+FUNCTIONS_DIR="$SCRIPT_DIR/functions"
 
 echo -e "${BLUE}📁 Working directory: $FUNCTIONS_DIR${NC}"
 echo ""
 
-# Deploy user login handler function
-echo -e "${BLUE}🚀 Deploying user-login-handler function...${NC}"
-cd "$FUNCTIONS_DIR/user-login-handler"
+# Function to deploy a single function
+deploy_function() {
+    local index="$1"
+    local FUNCTION_ID="${FUNCTION_IDS[$index]}"
+    local FUNCTION_NAME="${FUNCTION_NAMES[$index]}"
+    local FUNCTION_DIR="$FUNCTIONS_DIR/$FUNCTION_ID"
 
-# Check if function exists, if not create it
-FUNCTION_ID="user-login-handler"
-PROJECT_ID="68cc86c3002b27e13947"
-DATABASE_ID="68cc92d30024e1b6eeb6"
+    echo -e "${BLUE}🚀 Deploying $FUNCTION_NAME ($FUNCTION_ID)...${NC}"
 
-echo -e "${YELLOW}🔍 Checking if function exists...${NC}"
-if ! appwrite functions get --function-id "$FUNCTION_ID" &> /dev/null; then
-    echo -e "${YELLOW}📦 Function doesn't exist, creating it...${NC}"
-    
-    appwrite functions create \
+    # Check if function directory exists
+    if [ ! -d "$FUNCTION_DIR" ]; then
+        echo -e "${RED}❌ Function directory not found: $FUNCTION_DIR${NC}"
+        return 1
+    fi
+
+    cd "$FUNCTION_DIR"
+
+    # Check if function exists, if not create it
+    echo -e "${YELLOW}🔍 Checking if function exists...${NC}"
+    if ! appwrite functions get --function-id "$FUNCTION_ID" &> /dev/null; then
+        echo -e "${YELLOW}📦 Function doesn't exist, creating it...${NC}"
+
+        # Build create command
+        CREATE_CMD="appwrite functions create \
+            --function-id \"$FUNCTION_ID\" \
+            --name \"$FUNCTION_NAME\" \
+            --runtime \"node-18.0\" \
+            --execute \"any\" \
+            --timeout 30 \
+            --enabled true \
+            --logging true \
+            --entrypoint \"src/main.js\" \
+            --commands \"npm install\""
+
+        # Add events if this is the auth function (DISABLED - now handled by frontend)
+        # if [ "$FUNCTION_ID" = "auth-setup-handler" ]; then
+        #     CREATE_CMD="$CREATE_CMD --events \"$AUTH_EVENTS\""
+        # fi
+
+        # Add schedule if this is the scheduler function
+        if [ "$FUNCTION_ID" = "scheduler-maintenance-agent" ]; then
+            CREATE_CMD="$CREATE_CMD --schedule \"$SCHEDULER_SCHEDULE\""
+        fi
+
+        # Execute create command
+        eval "$CREATE_CMD"
+
+        echo -e "${GREEN}✅ Function created${NC}"
+
+        # Set environment variables for all functions
+        echo -e "${YELLOW}🔧 Setting environment variables...${NC}"
+        appwrite functions create-variable \
+            --function-id "$FUNCTION_ID" \
+            --key "APPWRITE_DATABASE_ID" \
+            --value "$DATABASE_ID"
+
+        appwrite functions create-variable \
+            --function-id "$FUNCTION_ID" \
+            --key "APPWRITE_PROJECT_ID" \
+            --value "$PROJECT_ID"
+
+        appwrite functions create-variable \
+            --function-id "$FUNCTION_ID" \
+            --key "APPWRITE_API_KEY" \
+            --value "$API_KEY"
+
+        appwrite functions create-variable \
+            --function-id "$FUNCTION_ID" \
+            --key "NODE_ENV" \
+            --value "production"
+
+        echo -e "${GREEN}✅ Environment variables set${NC}"
+    else
+        echo -e "${GREEN}✅ Function already exists${NC}"
+    fi
+
+    # Create deployment
+    echo -e "${YELLOW}📤 Creating deployment...${NC}"
+    appwrite functions create-deployment \
         --function-id "$FUNCTION_ID" \
-        --name "DJAMMS User Login Handler" \
-        --runtime "node-18.0" \
-        --execute "any" \
-        --events "users.*.sessions.*.create" \
-        --timeout 30 \
-        --enabled true \
-        --logging true \
-        --entrypoint "src/main.js" \
-        --commands "npm install"
-    
-    echo -e "${GREEN}✅ Function created${NC}"
-    
-    # Set environment variables
-    echo -e "${YELLOW}🔧 Setting environment variables...${NC}"
-    appwrite functions update-variable \
-        --function-id "$FUNCTION_ID" \
-        --key "APPWRITE_DATABASE_ID" \
-        --value "$DATABASE_ID"
-    
-    appwrite functions update-variable \
-        --function-id "$FUNCTION_ID" \
-        --key "NODE_ENV" \
-        --value "production"
-    
-    echo -e "${GREEN}✅ Environment variables set${NC}"
-else
-    echo -e "${GREEN}✅ Function already exists${NC}"
-fi
+        --code . \
+        --activate true
 
-# Create deployment
-echo -e "${YELLOW}📤 Creating deployment...${NC}"
-appwrite functions create-deployment \
-    --function-id "$FUNCTION_ID" \
-    --code . \
-    --activate true
+    echo -e "${GREEN}✅ Deployment created and activated for $FUNCTION_NAME${NC}"
+    echo ""
+}
 
-echo -e "${GREEN}✅ Deployment created and activated${NC}"
-
-# Get function details
-echo ""
-echo -e "${BLUE}📊 Function Details:${NC}"
-appwrite functions get --function-id "$FUNCTION_ID"
+# Deploy all functions
+for i in "${!FUNCTION_IDS[@]}"; do
+    deploy_function "$i"
+done
 
 echo ""
-echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
+echo -e "${GREEN}🎉 All functions deployed successfully!${NC}"
 echo ""
-echo -e "${BLUE}📋 Next Steps:${NC}"
-echo -e "${YELLOW}1.${NC} Verify the function is working in the Appwrite Console"
-echo -e "${YELLOW}2.${NC} Test user login to trigger the function"
-echo -e "${YELLOW}3.${NC} Check function logs for any issues"
-echo -e "${YELLOW}4.${NC} Monitor function execution in the Appwrite dashboard"
+echo -e "${BLUE}📋 Function Summary:${NC}"
+
+# List all functions with their details
+for i in "${!FUNCTION_IDS[@]}"; do
+    FUNCTION_ID="${FUNCTION_IDS[$i]}"
+    FUNCTION_NAME="${FUNCTION_NAMES[$i]}"
+    echo -e "${YELLOW}$FUNCTION_NAME:${NC}"
+    echo -e "  ID: $FUNCTION_ID"
+    if [ "$FUNCTION_ID" = "auth-setup-handler" ]; then
+        echo -e "  Events: $AUTH_EVENTS"
+    fi
+    if [ "$FUNCTION_ID" = "scheduler-maintenance-agent" ]; then
+        echo -e "  Schedule: $SCHEDULER_SCHEDULE"
+    fi
+    echo ""
+done
+
+echo -e "${BLUE}🔗 Appwrite Console:${NC} https://cloud.appwrite.io/console/project/$PROJECT_ID/functions"
 echo ""
-echo -e "${BLUE}🔗 Function URL:${NC} https://cloud.appwrite.io/console/project/$PROJECT_ID/functions/function?id=$FUNCTION_ID"
-echo ""
-echo -e "${GREEN}✅ DJAMMS User Login Handler is now active!${NC}"
+echo -e "${GREEN}✅ DJAMMS Consolidated Functions are now active!${NC}"

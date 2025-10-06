@@ -110,7 +110,8 @@ async function createUsersCollection() {
       { key: 'username', type: 'string', size: 255, required: false },
       { key: 'venue_id', type: 'string', size: 255, required: false },
       { key: 'role', type: 'string', size: 50, required: false, default: 'user' },
-      { key: 'preferences', type: 'string', size: 65535, required: false }, // JSON
+        // legacy 'preferences' attribute removed; use 'prefs' (stringified JSON)
+        { key: 'prefs', type: 'string', size: 65535, required: false }, // JSON
       { key: 'avatar_url', type: 'string', size: 2048, required: false },
       { key: 'is_active', type: 'boolean', required: false, default: true },
       { key: 'is_developer', type: 'boolean', required: false, default: false },
@@ -283,10 +284,11 @@ async function migrateUserData() {
       const newUser = {
         user_id: oldUser.$id,
         email: oldUser.email,
-        username: oldUser.name || oldUser.email.split('@')[0],
+        username: oldUser.name || (oldUser.email || '').split('@')[0],
         venue_id: oldUser.venue_id,
         role: oldUser.userRole || 'user',
-        preferences: JSON.stringify({
+        // Use 'prefs' (stringified JSON) instead of legacy 'preferences'
+        prefs: JSON.stringify({
           theme: 'dark',
           notifications_enabled: true,
           default_volume: 80,

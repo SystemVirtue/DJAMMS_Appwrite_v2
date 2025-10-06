@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+// Force-clean users: delete `preferences` attribute if exists, then delete+recreate each user doc using minimal payload
+import dotenv from 'dotenv';
+dotenv.config();
+import { Client, Users, Databases } from 'node-appwrite';
+import wrapDatabases from './wrapDatabases.mjs';
+
+const client = new Client()
+  .setEndpoint(process.env.APPWRITE_ENDPOINT || process.env.VITE_APPWRITE_ENDPOINT)
+  .setProject(process.env.APPWRITE_PROJECT_ID || process.env.VITE_APPWRITE_PROJECT_ID)
+  .setKey(process.env.APPWRITE_API_KEY || process.env.VITE_APPWRITE_API_KEY);
+
+const usersService = new Users(client);
+const databases = wrapDatabases(new Databases(client));
+const DB = process.env.APPWRITE_DATABASE_ID || process.env.VITE_APPWRITE_DATABASE_ID;
+
+(async function () {
+  try {
+    // Remove attribute if present
+    try {
+      await databases.deleteAttribute(DB, 'users', 'preferences');
+      console.log('Deleted attribute `preferences` (if it existed)');
+    } catch (e) {
+      console.log('Attribute `preferences` deletion attempt:', e.message || e);
+    }
+
+    const authList = await usersService.list();
+    const authUsers = authList.users || [];
+    console.log(`Auth users to process: ${authUsers.length}`);
+
+    for (const au of authUsers) {
+      const userId = au.$id;
+      const email = au.email;
+      console.log(`\nProcessing auth user: ${email} (${userId})`);
+
+      // delete existing db doc
+      try {
+        await databases.deleteDocument(DB, 'users', userId);
+        console.log('  Deleted existing users doc');
+      } catch (delErr) {
+        console.log('  Delete returned (ok to ignore):', delErr.message || delErr);
+      }
+
+      // minimal payload
+      const payload = {
+        user_id: userId,
+        email: email,
+        username: email ? email.split('@')[0] : userId,
+        role: 'user',
+        prefs: JSON.stringify({ theme: 'dark' }),
+        is_active: true,
+        is_developer: false,
+        avatar_url: au.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email||userId)}`,
+        created_at: new Date().toISOString()
+      };
+
+      try {
+        await databases.createDocument(DB, 'users', userId, payload);
+        console.log('  ✅ Recreated user doc without preferences');
+      } catch (createErr) {
+        console.log('  ❌ Failed to create:', createErr.message || createErr);
+      }
+    }
+
+    // verify
+    try {
+      const list = await databases.listDocuments(DB, 'users');
+      console.log('\nVerification:');
+      for (const d of list.documents || []) {
+        console.log('-', d.$id, 'keys:', Object.keys(d).join(', '));
+      }
+    } catch (vErr) {
+      console.log('Verification failed:', vErr.message || vErr);
+    }
+
+    console.log('\nForce cleanup complete');
+  } catch (e) {
+    console.error('Force cleanup failed:', e);
+    process.exit(1);
+  }
+})();

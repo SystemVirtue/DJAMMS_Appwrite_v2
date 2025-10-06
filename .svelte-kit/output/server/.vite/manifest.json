@@ -1,0 +1,527 @@
+{
+  ".svelte-kit/generated/server/internal.js": {
+    "file": "internal.js",
+    "name": "internal",
+    "src": ".svelte-kit/generated/server/internal.js",
+    "isEntry": true,
+    "imports": [
+      "_internal.js",
+      "_environment.js",
+      "_shared-server.js"
+    ]
+  },
+  "_Icon.js": {
+    "file": "chunks/Icon.js",
+    "name": "Icon",
+    "imports": [
+      "_ssr.js"
+    ]
+  },
+  "_alert-triangle.js": {
+    "file": "chunks/alert-triangle.js",
+    "name": "alert-triangle",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_appwrite.js": {
+    "file": "chunks/appwrite.js",
+    "name": "appwrite"
+  },
+  "_circle.js": {
+    "file": "chunks/circle.js",
+    "name": "circle",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_clock.js": {
+    "file": "chunks/clock.js",
+    "name": "clock",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_djamms.js": {
+    "file": "chunks/djamms.js",
+    "name": "djamms",
+    "imports": [
+      "_index.js",
+      "_appwrite.js",
+      "_ssr.js"
+    ]
+  },
+  "_environment.js": {
+    "file": "chunks/environment.js",
+    "name": "environment"
+  },
+  "_exports.js": {
+    "file": "chunks/exports.js",
+    "name": "exports"
+  },
+  "_idGenerator.js": {
+    "file": "chunks/idGenerator.js",
+    "name": "idGenerator"
+  },
+  "_index.js": {
+    "file": "chunks/index.js",
+    "name": "index",
+    "imports": [
+      "_ssr.js"
+    ]
+  },
+  "_internal.js": {
+    "file": "chunks/internal.js",
+    "name": "internal",
+    "imports": [
+      "_ssr.js",
+      "_ssr2.js",
+      "_environment.js",
+      "_shared-server.js"
+    ]
+  },
+  "_library.js": {
+    "file": "chunks/library.js",
+    "name": "library",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_music.js": {
+    "file": "chunks/music.js",
+    "name": "music",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_play.js": {
+    "file": "chunks/play.js",
+    "name": "play",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_plus.js": {
+    "file": "chunks/plus.js",
+    "name": "plus",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_save.js": {
+    "file": "chunks/save.js",
+    "name": "save",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_search.js": {
+    "file": "chunks/search.js",
+    "name": "search",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_server.js": {
+    "file": "chunks/server.js",
+    "name": "server",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_serviceInit.js": {
+    "file": "chunks/serviceInit.js",
+    "name": "serviceInit"
+  },
+  "_settings.js": {
+    "file": "chunks/settings.js",
+    "name": "settings",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_shared-server.js": {
+    "file": "chunks/shared-server.js",
+    "name": "shared-server"
+  },
+  "_shared.js": {
+    "file": "chunks/shared.js",
+    "name": "shared",
+    "imports": [
+      "_utils.js"
+    ]
+  },
+  "_shuffle.js": {
+    "file": "chunks/shuffle.js",
+    "name": "shuffle",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_skip-forward.js": {
+    "file": "chunks/skip-forward.js",
+    "name": "skip-forward",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_ssr.js": {
+    "file": "chunks/ssr.js",
+    "name": "ssr"
+  },
+  "_ssr2.js": {
+    "file": "chunks/ssr2.js",
+    "name": "ssr"
+  },
+  "_state.svelte.js": {
+    "file": "chunks/state.svelte.js",
+    "name": "state.svelte",
+    "imports": [
+      "_ssr2.js"
+    ]
+  },
+  "_users.js": {
+    "file": "chunks/users.js",
+    "name": "users",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_utils.js": {
+    "file": "chunks/utils.js",
+    "name": "utils"
+  },
+  "_volume-2.js": {
+    "file": "chunks/volume-2.js",
+    "name": "volume-2",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_wifi-off.js": {
+    "file": "chunks/wifi-off.js",
+    "name": "wifi-off",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_wifi.js": {
+    "file": "chunks/wifi.js",
+    "name": "wifi",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "_zap.js": {
+    "file": "chunks/zap.js",
+    "name": "zap",
+    "imports": [
+      "_ssr.js",
+      "_Icon.js"
+    ]
+  },
+  "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js": {
+    "file": "remote-entry.js",
+    "name": "remote-entry",
+    "src": "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js",
+    "isEntry": true,
+    "imports": [
+      "_shared.js",
+      "_utils.js",
+      "_environment.js"
+    ]
+  },
+  "node_modules/@sveltejs/kit/src/runtime/server/index.js": {
+    "file": "index.js",
+    "name": "index",
+    "src": "node_modules/@sveltejs/kit/src/runtime/server/index.js",
+    "isEntry": true,
+    "imports": [
+      "_shared.js",
+      "_environment.js",
+      "_exports.js",
+      "_utils.js",
+      "_index.js",
+      "_shared-server.js",
+      "_internal.js"
+    ]
+  },
+  "src/routes/+error.svelte": {
+    "file": "entries/pages/_error.svelte.js",
+    "name": "entries/pages/_error.svelte",
+    "src": "src/routes/+error.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_exports.js",
+      "_utils.js",
+      "_state.svelte.js",
+      "_alert-triangle.js"
+    ]
+  },
+  "src/routes/+layout.svelte": {
+    "file": "entries/pages/_layout.svelte.js",
+    "name": "entries/pages/_layout.svelte",
+    "src": "src/routes/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_djamms.js",
+      "_appwrite.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_layout._qKw9Ycp.css"
+    ]
+  },
+  "src/routes/+layout.ts": {
+    "file": "entries/pages/_layout.ts.js",
+    "name": "entries/pages/_layout.ts",
+    "src": "src/routes/+layout.ts",
+    "isEntry": true
+  },
+  "src/routes/+page.svelte": {
+    "file": "entries/pages/_page.svelte.js",
+    "name": "entries/pages/_page.svelte",
+    "src": "src/routes/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_exports.js",
+      "_utils.js",
+      "_state.svelte.js",
+      "_djamms.js",
+      "_appwrite.js",
+      "_play.js",
+      "_music.js",
+      "_Icon.js",
+      "_zap.js"
+    ]
+  },
+  "src/routes/+page.ts": {
+    "file": "entries/pages/_page.ts.js",
+    "name": "entries/pages/_page.ts",
+    "src": "src/routes/+page.ts",
+    "isEntry": true
+  },
+  "src/routes/adminconsole/+page.svelte": {
+    "file": "entries/pages/adminconsole/_page.svelte.js",
+    "name": "entries/pages/adminconsole/_page.svelte",
+    "src": "src/routes/adminconsole/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_djamms.js",
+      "_settings.js",
+      "_volume-2.js",
+      "_save.js",
+      "_Icon.js",
+      "_wifi-off.js",
+      "_circle.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.DCMZAnCs.css"
+    ]
+  },
+  "src/routes/api/admin/user-sync/+server.ts": {
+    "file": "entries/endpoints/api/admin/user-sync/_server.ts.js",
+    "name": "entries/endpoints/api/admin/user-sync/_server.ts",
+    "src": "src/routes/api/admin/user-sync/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_shared-server.js"
+    ]
+  },
+  "src/routes/api/playlists/+server.ts": {
+    "file": "entries/endpoints/api/playlists/_server.ts.js",
+    "name": "entries/endpoints/api/playlists/_server.ts",
+    "src": "src/routes/api/playlists/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_appwrite.js"
+    ]
+  },
+  "src/routes/api/ui-command/+server.ts": {
+    "file": "entries/endpoints/api/ui-command/_server.ts.js",
+    "name": "entries/endpoints/api/ui-command/_server.ts",
+    "src": "src/routes/api/ui-command/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_appwrite.js"
+    ]
+  },
+  "src/routes/api/venues/+server.ts": {
+    "file": "entries/endpoints/api/venues/_server.ts.js",
+    "name": "entries/endpoints/api/venues/_server.ts",
+    "src": "src/routes/api/venues/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_appwrite.js"
+    ]
+  },
+  "src/routes/auth/error/+page.svelte": {
+    "file": "entries/pages/auth/error/_page.svelte.js",
+    "name": "entries/pages/auth/error/_page.svelte",
+    "src": "src/routes/auth/error/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_exports.js",
+      "_utils.js",
+      "_state.svelte.js"
+    ]
+  },
+  "src/routes/dashboard/+page.svelte": {
+    "file": "entries/pages/dashboard/_page.svelte.js",
+    "name": "entries/pages/dashboard/_page.svelte",
+    "src": "src/routes/dashboard/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_exports.js",
+      "_utils.js",
+      "_state.svelte.js",
+      "_djamms.js",
+      "_serviceInit.js",
+      "_appwrite.js",
+      "_idGenerator.js",
+      "_save.js",
+      "_search.js",
+      "_Icon.js",
+      "_plus.js",
+      "_skip-forward.js",
+      "_play.js",
+      "_shuffle.js",
+      "_volume-2.js",
+      "_wifi-off.js",
+      "_circle.js",
+      "_library.js",
+      "_server.js",
+      "_wifi.js",
+      "_zap.js",
+      "_settings.js",
+      "_alert-triangle.js",
+      "_users.js",
+      "_clock.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.BMOIFEAq.css"
+    ]
+  },
+  "src/routes/dashboard/+page.ts": {
+    "file": "entries/pages/dashboard/_page.ts.js",
+    "name": "entries/pages/dashboard/_page.ts",
+    "src": "src/routes/dashboard/+page.ts",
+    "isEntry": true
+  },
+  "src/routes/djamms-dashboard/+page.svelte": {
+    "file": "entries/pages/djamms-dashboard/_page.svelte.js",
+    "name": "entries/pages/djamms-dashboard/_page.svelte",
+    "src": "src/routes/djamms-dashboard/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_exports.js",
+      "_utils.js",
+      "_state.svelte.js",
+      "_djamms.js",
+      "_idGenerator.js",
+      "_appwrite.js",
+      "_server.js",
+      "_settings.js",
+      "_wifi.js",
+      "_wifi-off.js",
+      "_Icon.js",
+      "_volume-2.js",
+      "_play.js",
+      "_music.js"
+    ]
+  },
+  "src/routes/jukebox-kiosk/+page.svelte": {
+    "file": "entries/pages/jukebox-kiosk/_page.svelte.js",
+    "name": "entries/pages/jukebox-kiosk/_page.svelte",
+    "src": "src/routes/jukebox-kiosk/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_music.js",
+      "_search.js",
+      "_clock.js"
+    ]
+  },
+  "src/routes/playlistlibrary/+page.svelte": {
+    "file": "entries/pages/playlistlibrary/_page.svelte.js",
+    "name": "entries/pages/playlistlibrary/_page.svelte",
+    "src": "src/routes/playlistlibrary/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_djamms.js",
+      "_appwrite.js",
+      "_serviceInit.js",
+      "_library.js",
+      "_search.js",
+      "_plus.js",
+      "_wifi.js",
+      "_circle.js",
+      "_wifi-off.js"
+    ]
+  },
+  "src/routes/queuemanager/+page.svelte": {
+    "file": "entries/pages/queuemanager/_page.svelte.js",
+    "name": "entries/pages/queuemanager/_page.svelte",
+    "src": "src/routes/queuemanager/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_djamms.js",
+      "_idGenerator.js",
+      "_appwrite.js",
+      "_serviceInit.js",
+      "_play.js",
+      "_shuffle.js",
+      "_skip-forward.js",
+      "_volume-2.js",
+      "_Icon.js",
+      "_plus.js",
+      "_search.js",
+      "_wifi.js",
+      "_circle.js",
+      "_wifi-off.js"
+    ]
+  },
+  "src/routes/videoplayer/+page.svelte": {
+    "file": "entries/pages/videoplayer/_page.svelte.js",
+    "name": "entries/pages/videoplayer/_page.svelte",
+    "src": "src/routes/videoplayer/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_ssr.js",
+      "_djamms.js",
+      "_idGenerator.js",
+      "_serviceInit.js",
+      "_appwrite.js",
+      "_users.js",
+      "_skip-forward.js",
+      "_play.js",
+      "_volume-2.js",
+      "_Icon.js"
+    ]
+  }
+}

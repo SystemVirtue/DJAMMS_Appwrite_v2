@@ -1,4 +1,8 @@
-import { databases, DATABASE_ID, COLLECTIONS } from '$lib/utils/appwrite';
+// Ensure the following file exists: src/lib/utils/appwrite.ts
+// If the file is missing, create it and export the required symbols.
+// If the path is incorrect, update it to the correct relative path.
+
+import { databases, DATABASE_ID, COLLECTIONS } from '../utils/appwrite';
 import type { 
 	UserInstanceSettings, 
 	UserInstanceSettingsCreate, 

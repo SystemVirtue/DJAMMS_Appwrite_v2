@@ -4,8 +4,8 @@ import type {
 	EnhancedPlaylistCreate, 
 	EnhancedPlaylistUpdate, 
 	ParsedEnhancedPlaylist,
-	PlaylistTrack 
-} from '$lib/types';
+	Track as PlaylistTrack 
+} from '$lib/types.ts';
 import { Query } from 'appwrite';
 
 /**

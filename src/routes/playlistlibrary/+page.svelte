@@ -32,10 +32,6 @@
 
 	import { browser } from '$app/environment';
 
-	// SvelteKit page props
-	export const data: any = {};
-	export const form: any = null;
-
 	// Playlists data from Appwrite
 	let playlists: Playlist[] = [];
 	let djammsService = getDJAMMSService(); // Initialize unified service
@@ -58,7 +54,7 @@
 		.filter(playlist => {
 			// Only show playlists that are public OR belong to current user
 			const currentUserId = $djammsStore.currentUser?.$id;
-			const hasAccess = playlist.is_public || (currentUserId && playlist.user_id === currentUserId);
+			const hasAccess = playlist.is_public || (currentUserId && playlist.owner_id === currentUserId);
 			
 			if (!hasAccess) return false;
 			
@@ -77,10 +73,12 @@
 				case 'name':
 					return a.name.localeCompare(b.name);
 				case 'tracks':
-					return (b.tracks?.length || 0) - (a.tracks?.length || 0);
+					return (Array.isArray(b.tracks) ? b.tracks.length : 0) - (Array.isArray(a.tracks) ? a.tracks.length : 0);
 				case 'duration':
-					const aDuration = a.tracks?.reduce((sum: number, track: PlaylistTrack) => sum + track.duration, 0) || 0;
-					const bDuration = b.tracks?.reduce((sum: number, track: PlaylistTrack) => sum + track.duration, 0) || 0;
+					const aTracks = Array.isArray(a.tracks) ? a.tracks : [];
+					const bTracks = Array.isArray(b.tracks) ? b.tracks : [];
+					const aDuration = aTracks.reduce((sum: number, track: any) => sum + (track.duration || 0), 0);
+					const bDuration = bTracks.reduce((sum: number, track: any) => sum + (track.duration || 0), 0);
 					return bDuration - aDuration;
 				case 'recent':
 				default:
@@ -120,22 +118,12 @@
 			// Also try to get the global default playlist
 			const globalPlaylist = await djammsService.getDefaultPlaylist();
 			if (globalPlaylist) {
-				const convertedGlobalPlaylist = {
-					$id: globalPlaylist.$id,
-					user_id: globalPlaylist.ownerId,
-					name: globalPlaylist.name,
-					description: globalPlaylist.description,
-					is_public: globalPlaylist.visibility === 'public',
-					tracks: typeof globalPlaylist.tracks === 'string' ? JSON.parse(globalPlaylist.tracks) : globalPlaylist.tracks,
-					thumbnail: globalPlaylist.thumbnail,
-					$createdAt: globalPlaylist.createdAt,
-					$updatedAt: globalPlaylist.updatedAt
-				};
-				globalDefaultPlaylist = convertedGlobalPlaylist;
+				// Cast to the main types.ts Playlist interface
+				globalDefaultPlaylist = globalPlaylist as unknown as Playlist;
 				// Add global playlist if it's not already in the list
 				const exists = playlists.find(p => p.$id === globalPlaylist.$id);
 				if (!exists) {
-					playlists = [convertedGlobalPlaylist, ...playlists];
+					playlists = [globalDefaultPlaylist, ...playlists];
 				}
 			}
 
@@ -249,7 +237,7 @@
 
 	// Close dropdown when clicking outside
 	function getTotalDuration(playlists: Playlist[]): number {
-		return playlists.reduce((sum, p) => sum + (p.tracks?.reduce((trackSum, track) => trackSum + track.duration, 0) || 0), 0);
+		return playlists.reduce((sum, p) => sum + (Array.isArray(p.tracks) ? p.tracks.reduce((trackSum: number, track: any) => trackSum + (track.duration || 0), 0) : 0), 0);
 	}
 
 	function handleClickOutside(event: MouseEvent) {
@@ -260,18 +248,32 @@
 	}
 
 	onMount(async () => {
+		// Wait for authentication to initialize
+		if ($djammsStore.isLoading) {
+			// Wait for auth to complete
+			await new Promise(resolve => {
+				const unsubscribe = djammsStore.subscribe(state => {
+					if (!state.isLoading) {
+						unsubscribe();
+						resolve(void 0);
+					}
+				});
+			});
+		}
+
 		// Check authentication
 		if (!$djammsStore.isAuthenticated) {
-			console.log('🔐 Playlist Library: User not authenticated, redirecting to dashboard');
-			window.location.href = '/dashboard';
+			console.log('🔐 Playlist Library: User not authenticated, closing window');
+			alert('Authentication required. Please log in first.');
+			window.close();
 			return;
 		}
 
 		// Check for duplicate instance first
 		if (browser && windowManager.shouldPreventDuplicate()) {
-			// Show alert and redirect
-			alert('Playlist Library is already open in another window. Redirecting to dashboard.');
-			window.location.href = '/dashboard';
+			// Show alert and close window
+			alert('Playlist Library is already open in another window.');
+			window.close();
 			return;
 		}
 
@@ -547,11 +549,11 @@
 									<div class="flex items-center gap-6 text-sm text-gray-300 mb-4">
 										<span class="flex items-center gap-2">
 											<Music class="w-4 h-4" />
-											{globalDefaultPlaylist.tracks?.length || 0} tracks
+											{Array.isArray(globalDefaultPlaylist.tracks) ? globalDefaultPlaylist.tracks.length : 0} tracks
 										</span>
 										<span class="flex items-center gap-2">
 											<Clock class="w-4 h-4" />
-											{formatTime(globalDefaultPlaylist.tracks?.reduce((sum, track) => sum + track.duration, 0) || 0)}
+											{formatTime(getTotalDuration([globalDefaultPlaylist]))}
 										</span>
 										<span class="flex items-center gap-2">
 											<Users class="w-4 h-4" />
@@ -634,11 +636,11 @@
 							<div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
 								<span class="flex items-center gap-1">
 									<Music class="w-3 h-3" />
-									{playlist.tracks?.length || 0}
+									{Array.isArray(playlist.tracks) ? playlist.tracks.length : 0}
 								</span>
 								<span class="flex items-center gap-1">
 									<Clock class="w-3 h-3" />
-									{formatTime(playlist.tracks?.reduce((sum, track) => sum + track.duration, 0) || 0)}
+									{formatTime(getTotalDuration([playlist]))}
 								</span>
 							</div>
 
@@ -719,11 +721,11 @@
 								<div class="flex items-center gap-4 text-sm text-gray-400">
 									<span class="flex items-center gap-1">
 										<Music class="w-3 h-3" />
-										{globalDefaultPlaylist.tracks?.length || 0}
+										{Array.isArray(globalDefaultPlaylist.tracks) ? globalDefaultPlaylist.tracks.length : 0}
 									</span>
 									<span class="flex items-center gap-1">
 										<Clock class="w-3 h-3" />
-										{formatTime(globalDefaultPlaylist.tracks?.reduce((sum, track) => sum + track.duration, 0) || 0)}
+										{formatTime(getTotalDuration([globalDefaultPlaylist]))}
 									</span>
 									<span class="flex items-center gap-1">
 										<Users class="w-3 h-3" />
@@ -789,11 +791,11 @@
 						<div class="flex items-center gap-6 text-sm text-gray-400">
 							<span class="flex items-center gap-1">
 								<Music class="w-4 h-4" />
-								{playlist.tracks?.length || 0}
+								{Array.isArray(playlist.tracks) ? playlist.tracks.length : 0}
 							</span>
 							<span class="flex items-center gap-1">
 								<Clock class="w-4 h-4" />
-								{formatTime(playlist.tracks?.reduce((sum, track) => sum + track.duration, 0) || 0)}
+								{formatTime(getTotalDuration([playlist]))}
 							</span>
 							<span>{formatDate(playlist.$updatedAt)}</span>
 						</div>

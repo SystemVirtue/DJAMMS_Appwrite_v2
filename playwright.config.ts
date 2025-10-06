@@ -18,7 +18,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5175',
+    baseURL: 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -31,31 +31,33 @@ export default defineConfig({
   },
 
   /* Configure the development server to start automatically */
-  webServer: {
-    command: 'npm run dev -- --port 5175',
-    port: 5175,
-    reuseExistingServer: true, // Always reuse if available
-    stdout: 'ignore',
-    stderr: 'pipe',
-    timeout: 120000, // 2 minutes timeout
-  },
+  //   command: 'npm run dev -- --port 5174',
+  //   port: 5174,
+  //   reuseExistingServer: true, // Always reuse if available
+  //   stdout: 'ignore',
+  //   stderr: 'pipe',
+  //   timeout: 120000, // 2 minutes timeout
+  // },
 
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'chromium-headed',
+      use: { 
+        ...devices['Desktop Chrome'],
+        headless: false, // Run headed for visual verification
+      },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
 
     /* Test against mobile viewports. */
     // {

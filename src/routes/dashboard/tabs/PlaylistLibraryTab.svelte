@@ -29,7 +29,16 @@
 		Grid3X3,
 		List,
 		Calendar,
-		User
+		User,
+		Cpu,
+		HardDrive,
+		MemoryStick,
+		Activity,
+		Globe,
+		Server,
+		Zap,
+		Database,
+		Timer
 	} from 'lucide-svelte';
 
 	import { browser } from '$app/environment';
@@ -51,8 +60,33 @@
 	let newPlaylistDescription = '';
 	let newPlaylistIsPublic = false;
 
+	// System Resources Monitoring
+	let systemResources = {
+		// Client-side metrics (implementable)
+		memoryUsage: { used: 0, total: 0, percentage: 0 },
+		networkStatus: 'unknown',
+		pageLoadTime: 0,
+		jsHeapSize: { used: 0, total: 0, limit: 0 },
+		connectionSpeed: 'unknown',
+		websocketStatus: 'unknown',
+		
+		// Server-side metrics (partially implementable)
+		appwriteHealth: 'unknown',
+		apiResponseTime: 0,
+		databaseStatus: 'unknown',
+		
+		// System metrics (not implementable from web app)
+		cpuUsage: 'unable to implement / access actual CPU Usage',
+		serverMemory: 'unable to implement / access server memory',
+		diskSpace: 'unable to implement / access disk space',
+		systemLoad: 'unable to implement / access system load'
+	};
+
+	let systemResourcesInterval: number;
+
 	// Reactive filtered and sorted playlists
-	$: filteredPlaylists = playlists
+		// Reactive filtered playlists from store
+	$: filteredPlaylists = $djammsStore.playlists
 		.filter(playlist => {
 			// Search filter
 			if (searchQuery) {
@@ -89,18 +123,16 @@
 			}
 		});
 
-	function getStatusDisplay(status: any) {
-		switch (status?.status) {
-			case 'connected-local-playing':
+	function getStatusDisplay(status: string) {
+		switch (status) {
+			case 'playing':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PLAYING', class: 'status-connected-playing' };
-			case 'connected-local-paused':
+			case 'paused':
 				return { icon: Circle, text: 'CONNECTED (LOCAL), PAUSED', class: 'status-connected-paused' };
-			case 'connected-remote-playing':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PLAYING', class: 'status-connected-playing' };
-			case 'connected-remote-paused':
-				return { icon: Wifi, text: 'CONNECTED (REMOTE), PAUSED', class: 'status-connected-paused' };
-			case 'server-error':
-				return { icon: AlertTriangle, text: 'SERVER ERROR', class: 'status-error' };
+			case 'idle':
+				return { icon: WifiOff, text: 'IDLE', class: 'status-disconnected' };
+			case 'stopped':
+				return { icon: WifiOff, text: 'STOPPED', class: 'status-disconnected' };
 			default:
 				return { icon: WifiOff, text: 'NO CONNECTED PLAYER', class: 'status-disconnected' };
 		}
@@ -111,18 +143,16 @@
 		error = null;
 		try {
 			console.log('🎵 Playlist Library Tab: Loading user playlists...');
-			const userPlaylistsData = await playlistService.getUserPlaylists();
-			playlists = userPlaylistsData || [];
-			setUserPlaylists(playlists);
+			await djammsStore.loadPlaylists();
+			// Playlists are now managed by djammsStore
 			
 			// Load global default playlist info
 			globalDefaultPlaylist = await playlistService.getGlobalDefaultPlaylist();
 			
-			console.log(`🎵 Playlist Library Tab: Loaded ${playlists.length} playlists`);
+			console.log(`🎵 Playlist Library Tab: Loaded playlists from store`);
 		} catch (err) {
 			console.error('🎵 Playlist Library Tab: Error loading playlists:', err);
 			error = err instanceof Error ? err.message : 'Failed to load playlists';
-			playlists = [];
 		} finally {
 			isLoading = false;
 		}
@@ -147,8 +177,8 @@
 			);
 
 			if (newPlaylist) {
-				playlists = [newPlaylist, ...playlists];
-				setUserPlaylists(playlists);
+				// Refresh playlists from store
+				await djammsStore.loadPlaylists();
 				
 				// Reset form
 				newPlaylistName = '';
@@ -167,7 +197,10 @@
 	async function selectPlaylist(playlist: Playlist) {
 		try {
 			console.log('🎵 Playlist Library Tab: Selecting playlist:', playlist.name);
-			setActivePlaylist(playlist);
+			djammsStore.update(state => ({
+				...state,
+				currentPlaylist: playlist
+			}));
 			console.log('🎵 Playlist Library Tab: Active playlist set to:', playlist.name);
 		} catch (err) {
 			console.error('🎵 Playlist Library Tab: Error selecting playlist:', err);
@@ -189,13 +222,70 @@
 		return date.toLocaleDateString();
 	}
 
+	// System Resources Monitoring Functions
+	function updateSystemResources() {
+		try {
+			// Client-side memory usage (implementable)
+			if ('memory' in performance) {
+				const memInfo = (performance as any).memory;
+				systemResources.memoryUsage = {
+					used: Math.round(memInfo.usedJSHeapSize / 1024 / 1024), // MB
+					total: Math.round(memInfo.totalJSHeapSize / 1024 / 1024), // MB
+					percentage: Math.round((memInfo.usedJSHeapSize / memInfo.totalJSHeapSize) * 100)
+				};
+				systemResources.jsHeapSize = {
+					used: Math.round(memInfo.usedJSHeapSize / 1024 / 1024),
+					total: Math.round(memInfo.totalJSHeapSize / 1024 / 1024),
+					limit: Math.round(memInfo.jsHeapSizeLimit / 1024 / 1024)
+				};
+			}
+
+			// Network status (implementable)
+			systemResources.networkStatus = navigator.onLine ? 'online' : 'offline';
+
+			// Connection speed estimation (implementable)
+			if ('connection' in navigator) {
+				const conn = (navigator as any).connection;
+				systemResources.connectionSpeed = conn?.effectiveType || 'unknown';
+			}
+
+			// Page load time (implementable)
+			if (performance.timing) {
+				systemResources.pageLoadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+			}
+
+			// WebSocket status (implementable - check if connected to Appwrite realtime)
+			systemResources.websocketStatus = $djammsStore.connectionStatus === 'connected' ? 'connected' : 'disconnected';
+
+			// Appwrite health check (implementable)
+			systemResources.appwriteHealth = $djammsStore.connectionStatus === 'connected' ? 'healthy' : 'unhealthy';
+
+			// API response time (implementable - measure recent API calls)
+			// This would require tracking API call timings
+			systemResources.apiResponseTime = systemResources.apiResponseTime || 0;
+
+			// Database status (implementable - check recent database operations)
+			systemResources.databaseStatus = $djammsStore.lastSync ? 'operational' : 'unknown';
+
+		} catch (error) {
+			console.warn('System resources monitoring error:', error);
+		}
+	}
+
 	onMount(() => {
 		console.log('🎵 Playlist Library Tab: Component mounted');
 		loadPlaylists();
+		
+		// Start system resources monitoring
+		updateSystemResources();
+		systemResourcesInterval = window.setInterval(updateSystemResources, 5000); // Update every 5 seconds
 	});
 
 	onDestroy(() => {
 		console.log('🎵 Playlist Library Tab: Component destroyed');
+		if (systemResourcesInterval) {
+			clearInterval(systemResourcesInterval);
+		}
 	});
 </script>
 
@@ -214,13 +304,66 @@
 			</div>
 
 			<!-- Player Status -->
-			{#if $playerStatus}
-				{@const statusDisplay = getStatusDisplay($playerStatus)}
+			{#if $djammsStore.playerState?.status}
+				{@const statusDisplay = getStatusDisplay($djammsStore.playerState.status)}
 				<div class="status-indicator {statusDisplay.class}">
 					<svelte:component this={statusDisplay.icon} class="w-4 h-4" />
 					<span class="text-sm">{statusDisplay.text}</span>
 				</div>
 			{/if}
+		</div>
+
+		<!-- System Resources Status -->
+		<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+			<!-- Memory Usage -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Activity class="w-4 h-4 text-blue-400 mb-1" />
+				<div class="text-xs text-gray-400">Memory</div>
+				<div class="text-sm font-semibold text-white">
+					{systemResources.memoryUsage.used}MB / {systemResources.memoryUsage.total}MB
+				</div>
+				<div class="text-xs text-gray-500">{systemResources.memoryUsage.percentage}%</div>
+			</div>
+
+			<!-- Network Status -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Wifi class="w-4 h-4 text-green-400 mb-1" />
+				<div class="text-xs text-gray-400">Network</div>
+				<div class="text-sm font-semibold text-white capitalize">{systemResources.networkStatus}</div>
+				<div class="text-xs text-gray-500">{systemResources.connectionSpeed}</div>
+			</div>
+
+			<!-- WebSocket Status -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Zap class="w-4 h-4 text-yellow-400 mb-1" />
+				<div class="text-xs text-gray-400">WebSocket</div>
+				<div class="text-sm font-semibold text-white capitalize">{systemResources.websocketStatus}</div>
+				<div class="text-xs text-gray-500">Real-time</div>
+			</div>
+
+			<!-- Appwrite Health -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Server class="w-4 h-4 text-purple-400 mb-1" />
+				<div class="text-xs text-gray-400">Appwrite</div>
+				<div class="text-sm font-semibold text-white capitalize">{systemResources.appwriteHealth}</div>
+				<div class="text-xs text-gray-500">Backend</div>
+			</div>
+
+			<!-- Database Status -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Database class="w-4 h-4 text-orange-400 mb-1" />
+				<div class="text-xs text-gray-400">Database</div>
+				<div class="text-sm font-semibold text-white capitalize">{systemResources.databaseStatus}</div>
+				<div class="text-xs text-gray-500">Operations</div>
+			</div>
+
+			<!-- CPU Usage (Unable to implement) -->
+			<div class="status-indicator bg-black/30 border border-white/20 rounded-lg p-3">
+				<Cpu class="w-4 h-4 text-red-400 mb-1" />
+				<div class="text-xs text-gray-400">CPU Usage</div>
+				<div class="text-sm font-semibold text-white">Unable to implement</div>
+				<div class="text-xs text-gray-500">Access actual CPU</div>
+			</div>
 		</div>
 
 		<!-- Controls Row -->
@@ -303,8 +446,8 @@
 			{#if globalDefaultPlaylist}
 				<span>Default: {globalDefaultPlaylist.name}</span>
 			{/if}
-			{#if $currentActivePlaylist}
-				<span class="text-music-pink">Active: {$currentActivePlaylist.name}</span>
+			{#if $djammsStore.currentPlaylist}
+				<span class="text-music-pink">Active: {$djammsStore.currentPlaylist.name}</span>
 			{/if}
 		</div>
 	</div>
@@ -389,7 +532,7 @@
 									</div>
 
 									<!-- Active indicator -->
-									{#if $currentActivePlaylist?.id === playlist.id}
+									{#if $djammsStore.currentPlaylist?.$id === playlist.$id}
 										<div class="absolute top-3 right-3 w-3 h-3 bg-music-pink rounded-full animate-pulse"></div>
 									{/if}
 								</div>
@@ -491,7 +634,7 @@
 											</div>
 										{/if}
 										
-										{#if $currentActivePlaylist?.id === playlist.id}
+										{#if $djammsStore.currentPlaylist?.$id === playlist.$id}
 											<div class="absolute top-1 right-1 w-2 h-2 bg-music-pink rounded-full animate-pulse"></div>
 										{/if}
 									</div>
@@ -607,22 +750,36 @@
 
 <style>
 	.status-indicator {
-		@apply flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 0.5rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
 	}
 	
 	.status-connected-playing {
-		@apply bg-green-500/20 text-green-400 border border-green-500/30;
+		background-color: rgba(34, 197, 94, 0.2);
+		color: rgb(74, 222, 128);
+		border: 1px solid rgba(34, 197, 94, 0.3);
 	}
 	
 	.status-connected-paused {
-		@apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+		background-color: rgba(245, 158, 11, 0.2);
+		color: rgb(250, 204, 21);
+		border: 1px solid rgba(245, 158, 11, 0.3);
 	}
 	
 	.status-disconnected {
-		@apply bg-red-500/20 text-red-400 border border-red-500/30;
+		background-color: rgba(239, 68, 68, 0.2);
+		color: rgb(248, 113, 113);
+		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
 	
 	.status-error {
-		@apply bg-red-500/20 text-red-400 border border-red-500/30;
+		background-color: rgba(239, 68, 68, 0.2);
+		color: rgb(248, 113, 113);
+		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
 </style>
